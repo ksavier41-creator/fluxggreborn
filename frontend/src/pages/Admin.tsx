@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
-import { applicationTypes, whitelistQuestionLabels } from "@/data/content";
+import { applicationTypes, questionLabels } from "@/data/content";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -449,7 +449,7 @@ export default function Admin() {
                                                                 <div key={key}>
                                                                     <p className="text-[10px] tracking-[0.2em] text-[#737373] leading-relaxed">
                                                                         {(
-                                                                            whitelistQuestionLabels[
+                                                                            questionLabels[
                                                                                 key
                                                                             ] ??
                                                                             key

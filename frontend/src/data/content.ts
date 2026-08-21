@@ -175,22 +175,72 @@ export const stats: Stat[] = [
 export const DISCORD_URL = "https://discord.gg/SKQ9Qeps38";
 export const FIVEM_CONNECT_URL = "fivem://connect/play.fluxgg.gg";
 
-export interface WhitelistQuestion {
+export interface ApplicationQuestion {
     key: string;
     label: string;
     textarea: boolean;
 }
 
-export const whitelistQuestions: WhitelistQuestion[] = [
-    { key: "imie_ic", label: "Imię i nazwisko postaci (IC)", textarea: false },
-    { key: "wiek_ooc", label: "Wiek (OOC)", textarea: false },
-    { key: "opis_postaci", label: "Opis postaci", textarea: true },
-    {
-        key: "sytuacja",
-        label: "Jesteś sam wśród swoich największych wrogów — jesteście na imprezie prasowej Twojej własnej firmy. Oni nie wiedzą, że jesteś szefem i cały czas się z Ciebie śmieją oraz poniżają Cię. Jak Twoja postać się zachowa i jakie decyzje podejmie?",
-        textarea: true,
-    },
-];
+export const applicationQuestions: Record<string, ApplicationQuestion[]> = {
+    whitelist: [
+        { key: "wiek", label: "Wiek", textarea: false },
+        { key: "doswiadczenie_rp", label: "Doświadczenie w RP", textarea: false },
+        { key: "historia_postaci", label: "Historia postaci", textarea: true },
+        { key: "co_odgrywasz", label: "Co będziesz odgrywał?", textarea: true },
+        {
+            key: "kartel",
+            label: "Dostajesz informację, że Twoja postać jest poszukiwana przez groźny kartel. Jakie czynności wykonasz, aby Cię nie złapali?",
+            textarea: true,
+        },
+        {
+            key: "rozwoj_crime",
+            label: "Opisz, w jaki sposób powinien przebiegać rozwój postaci crime na serwerach Hard RP",
+            textarea: true,
+        },
+        {
+            key: "sabotaz",
+            label: "Ktoś sabotuje Twój biznes, ale nie wiesz kto. Jak chcesz temu zapobiec i co robisz, żeby dowiedzieć się, kto to robi?",
+            textarea: true,
+        },
+    ],
+    ekipa: [
+        { key: "nazwa_ekipy", label: "Nazwa ekipy", textarea: false },
+        { key: "typ_ekipy", label: "Typ ekipy (gang/organizacja)", textarea: false },
+        { key: "ilosc_osob", label: "Ile masz osób do ekipy?", textarea: false },
+        { key: "wklad", label: "Co Twoja ekipa wniesie do rozgrywki?", textarea: true },
+        { key: "watki", label: "Jak Twoja ekipa będzie rozwijała wątki?", textarea: true },
+        { key: "historia_ekipy", label: "Historia ekipy", textarea: true },
+    ],
+    biznes: [
+        { key: "nazwa_firmy", label: "Nazwa firmy", textarea: false },
+        { key: "typ_firmy", label: "Typ firmy", textarea: false },
+        { key: "pracownicy", label: "Ilość pewnych pracowników od powstania firmy", textarea: false },
+        { key: "plan_biznesowy", label: "Plan biznesowy", textarea: true },
+        { key: "wklad_firmy", label: "Co Twoja firma wniesie na serwer?", textarea: true },
+    ],
+    administracja: [
+        { key: "wiek", label: "Wiek", textarea: false },
+        { key: "doswiadczenie_admin", label: "Doświadczenie w administracji", textarea: true },
+        {
+            key: "awantura",
+            label: "Co zrobisz, gdy gracz awanturuje się na kanale pomocy?",
+            textarea: true,
+        },
+        {
+            key: "rdm",
+            label: "Co zrobisz, gdy podczas spectowania graczy spotkasz gracza, który losowo strzela do ludzi?",
+            textarea: true,
+        },
+        {
+            key: "metagaming",
+            label: "Słyszysz podczas rozmowy z graczem przez jego mikrofon rozmowy na Discordzie. Co robisz?",
+            textarea: true,
+        },
+    ],
+};
 
-export const whitelistQuestionLabels: Record<string, string> =
-    Object.fromEntries(whitelistQuestions.map((q) => [q.key, q.label]));
+export const questionLabels: Record<string, string> = Object.fromEntries(
+    Object.values(applicationQuestions)
+        .flat()
+        .map((q) => [q.key, q.label]),
+);

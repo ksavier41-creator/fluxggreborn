@@ -94,6 +94,13 @@ class ApplicationCreate(BaseModel):
 
 WHITELIST_QUESTION_KEYS = {"imie_ic", "wiek_ooc", "opis_postaci", "sytuacja"}
 
+QUESTION_KEYS = {
+    "whitelist": {"wiek", "doswiadczenie_rp", "historia_postaci", "co_odgrywasz", "kartel", "rozwoj_crime", "sabotaz"},
+    "ekipa": {"nazwa_ekipy", "typ_ekipy", "ilosc_osob", "wklad", "watki", "historia_ekipy"},
+    "biznes": {"nazwa_firmy", "typ_firmy", "pracownicy", "plan_biznesowy", "wklad_firmy"},
+    "administracja": {"wiek", "doswiadczenie_admin", "awantura", "rdm", "metagaming"},
+}
+
 
 class ApplicationDocument(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -451,14 +458,12 @@ async def create_application(body: ApplicationCreate, authorization: Optional[st
     effective_status = stored_setting["status"] if stored_setting else APPLICATION_TYPE_DEFAULTS.get(body.type, "soon")
     if effective_status != "open":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nabór na ten typ podania jest zamknięty")
-    if body.type == "whitelist":
-        answers = body.answers or {}
-        if not WHITELIST_QUESTION_KEYS.issubset(answers) or any(
-            len(str(answers.get(key, "")).strip()) < 2 for key in WHITELIST_QUESTION_KEYS
-        ):
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Uzupełnij wszystkie pytania podania")
-    elif len(body.motivation.strip()) < 10:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Motywacja jest zbyt krótka")
+    required_keys = QUESTION_KEYS.get(body.type, set())
+    answers = body.answers or {}
+    if not required_keys.issubset(answers) or any(
+        len(str(answers.get(key, "")).strip()) < 1 for key in required_keys
+    ):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Uzupełnij wszystkie pytania podania")
     uid = require_user_id(authorization)
     user_doc = await db.users.find_one({"_id": ObjectId(uid)})
     if not user_doc:

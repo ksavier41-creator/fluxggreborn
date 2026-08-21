@@ -8,7 +8,7 @@ import { TiltCard } from "@/components/TiltCard";
 import { SectionHeading } from "@/components/SectionHeading";
 import {
     applicationTypes,
-    whitelistQuestions,
+    applicationQuestions,
     type ApplicationType,
 } from "@/data/content";
 import { EASE } from "@/lib/motion";
@@ -27,7 +27,7 @@ function ApplicationModal({
 }) {
     const { user } = useAuth();
     const [sending, setSending] = useState(false);
-    const isWhitelist = application.id === "whitelist";
+    const questions = applicationQuestions[application.id] ?? [];
 
     const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -37,22 +37,15 @@ function ApplicationModal({
             toast.error("Wymagane zalogowanie");
             return;
         }
-        const payload: Record<string, unknown> = {
+        const payload = {
             type: application.id,
             nick: String(data.get("nick") ?? ""),
             discord: String(data.get("discord") ?? ""),
             steam_id: String(data.get("steam") ?? ""),
+            answers: Object.fromEntries(
+                questions.map((q) => [q.key, String(data.get(q.key) ?? "")]),
+            ),
         };
-        if (isWhitelist) {
-            payload.answers = Object.fromEntries(
-                whitelistQuestions.map((q) => [
-                    q.key,
-                    String(data.get(q.key) ?? ""),
-                ]),
-            );
-        } else {
-            payload.motivation = String(data.get("motivation") ?? "");
-        }
         setSending(true);
         try {
             const res = await fetch(`${API}/applications`, {
@@ -167,48 +160,39 @@ function ApplicationModal({
                             />
                         </div>
                     </div>
-                    {isWhitelist ? (
-                        whitelistQuestions.map((question) => (
-                            <div key={question.key}>
-                                <label className="block text-xs tracking-[0.2em] text-[#737373] mb-2 leading-relaxed">
-                                    {question.label.toUpperCase()}
-                                </label>
-                                {question.textarea ? (
-                                    <textarea
-                                        data-testid={`application-field-${question.key}`}
-                                        name={question.key}
-                                        required
-                                        minLength={2}
-                                        rows={question.key === "sytuacja" ? 6 : 4}
-                                        className={`${inputClass} resize-none`}
-                                    />
-                                ) : (
-                                    <input
-                                        data-testid={`application-field-${question.key}`}
-                                        name={question.key}
-                                        required
-                                        minLength={2}
-                                        className={inputClass}
-                                    />
-                                )}
-                            </div>
-                        ))
-                    ) : (
-                        <div>
-                            <label className="block text-xs tracking-[0.2em] text-[#737373] mb-2">
-                                DLACZEGO TY?
+                    {questions.map((question) => (
+                        <div key={question.key}>
+                            <label
+                                className={`block mb-2 ${
+                                    question.textarea
+                                        ? "text-xs text-[#A3A3A3] leading-relaxed"
+                                        : "text-xs tracking-[0.2em] text-[#737373]"
+                                }`}
+                            >
+                                {question.textarea
+                                    ? question.label
+                                    : question.label.toUpperCase()}
                             </label>
-                            <textarea
-                                data-testid="application-field-motivation"
-                                name="motivation"
-                                required
-                                minLength={10}
-                                rows={5}
-                                placeholder="Opowiedz krótko o sobie, swoim doświadczeniu w RP i motywacji…"
-                                className={`${inputClass} resize-none`}
-                            />
+                            {question.textarea ? (
+                                <textarea
+                                    data-testid={`application-field-${question.key}`}
+                                    name={question.key}
+                                    required
+                                    minLength={2}
+                                    rows={4}
+                                    className={`${inputClass} resize-none`}
+                                />
+                            ) : (
+                                <input
+                                    data-testid={`application-field-${question.key}`}
+                                    name={question.key}
+                                    required
+                                    minLength={2}
+                                    className={inputClass}
+                                />
+                            )}
                         </div>
-                    )}
+                    ))}
                     <button
                         data-testid={`application-submit-${application.id}`}
                         type="submit"
