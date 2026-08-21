@@ -1,8 +1,25 @@
+import { useEffect, useState } from "react";
 import { BadgeCheck, CalendarDays, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/auth/AuthContext";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
+import { applicationTypes } from "@/data/content";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+interface MyApplication {
+    id: string;
+    type: string;
+    status: string;
+    created_at: string;
+}
+
+const statusLabels: Record<string, string> = {
+    pending: "OCZEKUJE",
+    accepted: "PRZYJĘTE",
+    rejected: "ODRZUCONE",
+};
 
 function StatusPill({
     label,
@@ -30,6 +47,18 @@ function StatusPill({
 
 export default function Profile() {
     const { user, isAuthenticated, loading, logout } = useAuth();
+    const [applications, setApplications] = useState<MyApplication[]>([]);
+
+    useEffect(() => {
+        const token = localStorage.getItem("fluxgg-auth-token");
+        if (!token || !user || user.demo) return;
+        fetch(`${API}/applications/my`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((res) => (res.ok ? res.json() : []))
+            .then(setApplications)
+            .catch(() => {});
+    }, [user]);
 
     if (loading) {
         return (
@@ -176,7 +205,7 @@ export default function Profile() {
                     </div>
                 </Reveal>
 
-                <div className="lg:col-span-7">
+                <div className="lg:col-span-7 space-y-6">
                     <Reveal delay={0.1}>
                         <div
                             data-testid="profile-ranks-card"
@@ -202,6 +231,64 @@ export default function Profile() {
                                     Brak przypisanych rang. Rangi i produkty
                                     pojawią się tutaj po uruchomieniu sklepu
                                     serwera.
+                                </p>
+                            )}
+                        </div>
+                    </Reveal>
+
+                    <Reveal delay={0.18}>
+                        <div
+                            data-testid="profile-applications-card"
+                            className="border border-white/10 bg-[#0A0A0A] p-8 md:p-10"
+                        >
+                            <p className="text-xs tracking-[0.25em] text-[#737373] mb-6">
+                                MOJE PODANIA
+                            </p>
+                            {applications.length > 0 ? (
+                                <div className="divide-y divide-white/5">
+                                    {applications.map((application) => {
+                                        const type = applicationTypes.find(
+                                            (t) => t.id === application.type,
+                                        );
+                                        return (
+                                            <div
+                                                key={application.id}
+                                                data-testid={`profile-application-${application.id}`}
+                                                className="py-4 flex flex-wrap items-center justify-between gap-3"
+                                            >
+                                                <div>
+                                                    <p className="text-sm text-white">
+                                                        {type?.name ??
+                                                            application.type}
+                                                    </p>
+                                                    <p className="text-xs text-[#737373] mt-1">
+                                                        {new Date(
+                                                            application.created_at,
+                                                        ).toLocaleDateString(
+                                                            "pl-PL",
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                <span className="text-[10px] tracking-[0.2em] border border-white/20 text-white/70 px-2.5 py-1">
+                                                    {statusLabels[
+                                                        application.status
+                                                    ] ??
+                                                        application.status.toUpperCase()}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-[#737373] leading-relaxed">
+                                    Nie złożyłeś jeszcze żadnego podania.{" "}
+                                    <Link
+                                        to="/podania"
+                                        data-testid="profile-goto-applications"
+                                        className="text-white/70 hover:text-white border-b border-white/20 hover:border-white pb-0.5 transition-colors duration-300"
+                                    >
+                                        Przejdź do podań
+                                    </Link>
                                 </p>
                             )}
                         </div>

@@ -300,6 +300,114 @@ async def unlink_provider(provider: str, authorization: Optional[str] = Header(d
     return to_user_out(doc)
 
 
+ADMIN_KEY = os.environ.get("ADMIN_KEY", "")
+APPLICATION_TYPES = {"whitelist", "administracja", "frakcja", "biznes", "ekipa"}
+
+
+class ApplicationCreate(BaseModel):
+    type: str = Field(min_length=2, max_length=40)
+    nick: str = Field(min_length=2, max_length=60)
+    discord: str = Field(min_length=2, max_length=60)
+    steam_id: str = Field(min_length=2, max_length=40)
+    motivation: str = Field(min_length=10, max_length=2000)
+
+
+class ApplicationDocument(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    user_id: Optional[str] = None
+    username: str
+    type: str
+    nick: str
+    discord: str
+    steam_id: str
+    motivation: str
+    status: str = "pending"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def to_mongo(self) -> dict:
+        doc = self.model_dump(by_alias=True, exclude={"id"})
+        if self.id:
+            doc["_id"] = ObjectId(self.id)
+        return doc
+
+    @classmethod
+    def from_mongo(cls, doc: dict) -> "ApplicationDocument":
+        return cls(**doc)
+
+
+class ApplicationOut(BaseModel):
+    id: str
+    username: str
+    type: str
+    nick: str
+    discord: str
+    steam_id: str
+    motivation: str
+    status: str
+    created_at: str
+
+
+def to_application_out(doc: dict) -> ApplicationOut:
+    created = doc.get("created_at")
+    if isinstance(created, datetime):
+        created_at = created.isoformat()
+    else:
+        created_at = str(created) if created else datetime.now(timezone.utc).isoformat()
+    return ApplicationOut(
+        id=str(doc["_id"]),
+        username=doc.get("username", ""),
+        type=doc.get("type", ""),
+        nick=doc.get("nick", ""),
+        discord=doc.get("discord", ""),
+        steam_id=doc.get("steam_id", ""),
+        motivation=doc.get("motivation", ""),
+        status=doc.get("status", "pending"),
+        created_at=created_at,
+    )
+
+
+def require_user_id(authorization: Optional[str]) -> str:
+    uid = bearer_user_id(authorization)
+    if not uid or not ObjectId.is_valid(uid):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wymagane zalogowanie")
+    return uid
+
+
+@api_router.post("/applications", response_model=ApplicationOut, status_code=201)
+async def create_application(body: ApplicationCreate, authorization: Optional[str] = Header(default=None)):
+    if body.type not in APPLICATION_TYPES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nieznany typ podania")
+    uid = require_user_id(authorization)
+    user_doc = await db.users.find_one({"_id": ObjectId(uid)})
+    if not user_doc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Nie znaleziono użytkownika")
+    doc = ApplicationDocument(
+        user_id=uid,
+        username=user_doc.get("username", "Gracz"),
+        **body.model_dump(),
+    )
+    result = await db.applications.insert_one(doc.to_mongo())
+    created = await db.applications.find_one({"_id": result.inserted_id})
+    return to_application_out(created)
+
+
+@api_router.get("/applications/my", response_model=list[ApplicationOut])
+async def my_applications(authorization: Optional[str] = Header(default=None)):
+    uid = require_user_id(authorization)
+    docs = await db.applications.find({"user_id": uid}).sort("created_at", -1).to_list(100)
+    return [to_application_out(doc) for doc in docs]
+
+
+@api_router.get("/admin/applications", response_model=list[ApplicationOut])
+async def admin_applications(x_admin_key: Optional[str] = Header(default=None)):
+    if not ADMIN_KEY or x_admin_key != ADMIN_KEY:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Brak dostępu")
+    docs = await db.applications.find().sort("created_at", -1).to_list(500)
+    return [to_application_out(doc) for doc in docs]
+
+
 app.include_router(api_router)
 
 app.add_middleware(

@@ -179,5 +179,5 @@ export const stats: Stat[] = [
     { label: "EVENTÓW", value: 250, suffix: "+" },
 ];
 
-export const DISCORD_URL = "https://discord.gg/fluxgg";
+export const DISCORD_URL = "https://discord.gg/SKQ9Qeps38";
 export const FIVEM_CONNECT_URL = "fivem://connect/play.fluxgg.gg";

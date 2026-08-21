@@ -1,12 +1,15 @@
 import { useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/auth/AuthContext";
 import { Reveal } from "@/components/Reveal";
 import { TiltCard } from "@/components/TiltCard";
 import { SectionHeading } from "@/components/SectionHeading";
 import { applicationTypes, type ApplicationType } from "@/data/content";
 import { EASE } from "@/lib/motion";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 function ApplicationModal({
     application,
@@ -15,13 +18,54 @@ function ApplicationModal({
     application: ApplicationType;
     onClose: () => void;
 }) {
-    const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    const { user } = useAuth();
+    const [sending, setSending] = useState(false);
+
+    const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        toast.success("Podanie przygotowane", {
-            description:
-                "Formularz działa w trybie demonstracyjnym — wysyłka zostanie podłączona do backendu.",
-        });
-        onClose();
+        const form = e.currentTarget;
+        const data = new FormData(form);
+        const token = localStorage.getItem("fluxgg-auth-token");
+        if (!token) {
+            toast.error("Wymagane zalogowanie");
+            return;
+        }
+        setSending(true);
+        try {
+            const res = await fetch(`${API}/applications`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    type: application.id,
+                    nick: String(data.get("nick") ?? ""),
+                    discord: String(data.get("discord") ?? ""),
+                    steam_id: String(data.get("steam") ?? ""),
+                    motivation: String(data.get("motivation") ?? ""),
+                }),
+            });
+            if (!res.ok) {
+                let detail = "Nie udało się wysłać podania";
+                try {
+                    const err = await res.json();
+                    if (err?.detail) detail = err.detail;
+                } catch {
+                    /* keep default */
+                }
+                throw new Error(detail);
+            }
+            toast.success("Podanie wysłane", {
+                description:
+                    "Zgłoszenie trafiło do administracji. Decyzję otrzymasz na Discordzie.",
+            });
+            onClose();
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Błąd wysyłki");
+        } finally {
+            setSending(false);
+        }
     };
 
     const inputClass =
@@ -63,14 +107,17 @@ function ApplicationModal({
                 <h3 className="font-display text-2xl md:text-3xl tracking-tight text-white mb-8">
                     {application.name}
                 </h3>
-                <form onSubmit={onSubmit} className="space-y-5">
+                <form onSubmit={(e) => void onSubmit(e)} className="space-y-5">
                     <div>
                         <label className="block text-xs tracking-[0.2em] text-[#737373] mb-2">
                             NICK W GRZE
                         </label>
                         <input
                             data-testid="application-field-nick"
+                            name="nick"
                             required
+                            minLength={2}
+                            defaultValue={user?.username ?? ""}
                             placeholder="np. Jan_Kowalski"
                             className={inputClass}
                         />
@@ -78,12 +125,15 @@ function ApplicationModal({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
                             <label className="block text-xs tracking-[0.2em] text-[#737373] mb-2">
-                                DISCORD
+                                DISCORD ID
                             </label>
                             <input
                                 data-testid="application-field-discord"
+                                name="discord"
                                 required
-                                placeholder="np. xnova"
+                                minLength={2}
+                                defaultValue={user?.discord_id ?? ""}
+                                placeholder="np. 482910384756102234"
                                 className={inputClass}
                             />
                         </div>
@@ -93,7 +143,10 @@ function ApplicationModal({
                             </label>
                             <input
                                 data-testid="application-field-steam"
+                                name="steam"
                                 required
+                                minLength={2}
+                                defaultValue={user?.steam_id ?? ""}
                                 placeholder="7656119…"
                                 className={inputClass}
                             />
@@ -105,7 +158,9 @@ function ApplicationModal({
                         </label>
                         <textarea
                             data-testid="application-field-motivation"
+                            name="motivation"
                             required
+                            minLength={10}
                             rows={5}
                             placeholder="Opowiedz krótko o sobie, swoim doświadczeniu w RP i motywacji…"
                             className={`${inputClass} resize-none`}
@@ -114,13 +169,20 @@ function ApplicationModal({
                     <button
                         data-testid={`application-submit-${application.id}`}
                         type="submit"
-                        className="w-full bg-white text-black text-sm font-medium tracking-[0.2em] py-4 hover:bg-[#E5E5E5] active:scale-[0.98] transition-[background-color,transform] duration-200"
+                        disabled={sending}
+                        className="w-full bg-white text-black text-sm font-medium tracking-[0.2em] py-4 hover:bg-[#E5E5E5] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none transition-[background-color,transform] duration-200 flex items-center justify-center gap-2"
                     >
-                        WYŚLIJ PODANIE
+                        {sending && (
+                            <Loader2
+                                size={15}
+                                strokeWidth={1.5}
+                                className="animate-spin"
+                            />
+                        )}
+                        {sending ? "WYSYŁANIE…" : "WYŚLIJ PODANIE"}
                     </button>
                     <p className="text-[11px] text-[#737373] leading-relaxed text-center">
-                        Formularz demonstracyjny — zapis do bazy zostanie
-                        dodany wraz z backendem.
+                        Podanie trafia bezpośrednio do administracji serwera.
                     </p>
                 </form>
             </motion.div>
@@ -130,6 +192,24 @@ function ApplicationModal({
 
 export default function Applications() {
     const [selected, setSelected] = useState<ApplicationType | null>(null);
+    const { isAuthenticated, user } = useAuth();
+
+    const openApplication = (application: ApplicationType) => {
+        if (application.status !== "open") return;
+        if (!isAuthenticated) {
+            toast.error("Zaloguj się, aby złożyć podanie", {
+                description: "Użyj przycisku ZALOGUJ SIĘ w nawigacji.",
+            });
+            return;
+        }
+        if (user?.demo) {
+            toast.error("Konto demo nie może wysyłać podań", {
+                description: "Zaloguj się przez Steam lub Discord.",
+            });
+            return;
+        }
+        setSelected(application);
+    };
 
     return (
         <div
@@ -139,7 +219,7 @@ export default function Applications() {
             <SectionHeading
                 overline="Dołącz do nas"
                 title="Podania"
-                description="Wybierz typ podania i dołącz do miasta. Każde zgłoszenie rozpatruje zespół rekrutacyjny — decyzję otrzymasz na Discordzie."
+                description="Wybierz typ podania i dołącz do miasta. Każde zgłoszenie trafia bezpośrednio do administracji — decyzję otrzymasz na Discordzie."
             />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {applicationTypes.map((application, i) => (
@@ -173,10 +253,7 @@ export default function Applications() {
                             </p>
                             <button
                                 data-testid={`application-open-${application.id}`}
-                                onClick={() =>
-                                    application.status === "open" &&
-                                    setSelected(application)
-                                }
+                                onClick={() => openApplication(application)}
                                 disabled={application.status !== "open"}
                                 className={`mt-10 w-full py-3.5 text-sm tracking-[0.2em] transition-[background-color,border-color,color,transform] duration-200 active:scale-[0.98] ${
                                     application.status === "open"

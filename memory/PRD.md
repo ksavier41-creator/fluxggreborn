@@ -43,7 +43,12 @@ Screenshoty e2e: home (hero + scroll), płatności (+toast), regulamin (search f
 - Backend włączony: prawdziwe logowanie Steam OpenID (aktywne, klucz API w env) + Discord OAuth (kod gotowy, czeka na Client ID/Secret), JWT, linkowanie kont, DELETE unlink.
 - Frontend: AuthContext na prawdziwej sesji (GET /api/auth/me), strony callback /auth/discord/callback i /auth/steam/callback, konto demo jako podgląd.
 
+## Zmiany (2026-08-21, iteracja 3)
+- Discord OAuth aktywowany (klucze w env), flow zweryfikowany do strony Discorda.
+- Podania zapisują się do MongoDB (POST /api/applications, wymagany JWT), profil pokazuje "Moje podania" ze statusem, admin ma GET /api/admin/applications z kluczem x-admin-key.
+- Link Discord podmieniony na https://discord.gg/SKQ9Qeps38. Link FiveM (GRAJ TERAZ) nadal placeholder.
+
 ## Następne kroki
-1. Użytkownik podaje Discord Client ID + Secret → wpisać do backend/.env, zrestartować backend.
-2. Przetestować pełny flow Steam w przeglądarce (wymaga konta Steam).
-3. FiveM stats po otrzymaniu kodu serwera cfx.re.
+1. Przetestować pełny flow Steam/Discord w przeglądarce (wymaga kont użytkownika).
+2. FiveM stats po otrzymaniu kodu serwera cfx.re + prawdziwy link fivem://connect.
+3. Opcjonalnie: powiadomienia o podaniach na Discord webhook (potrzebny URL webhooka).
