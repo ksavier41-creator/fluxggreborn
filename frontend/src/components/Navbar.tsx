@@ -14,12 +14,16 @@ const links = [
     { to: "/o-nas", label: "O NAS", testId: "nav-link-about" },
 ];
 
+const adminLink = { to: "/admin", label: "ADMIN", testId: "nav-link-admin" };
+
 export function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const [loginOpen, setLoginOpen] = useState(false);
     const { isAuthenticated, user } = useAuth();
     const location = useLocation();
+
+    const navLinks = user?.is_admin ? [...links, adminLink] : links;
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 40);
@@ -56,7 +60,7 @@ export function Navbar() {
                     </Link>
 
                     <nav className="hidden lg:flex items-center gap-7">
-                        {links.map((link) => (
+                        {navLinks.map((link) => (
                             <NavLink
                                 key={link.to}
                                 to={link.to}
@@ -138,7 +142,7 @@ export function Navbar() {
                         transition={{ duration: 0.35 }}
                     >
                         <nav className="space-y-2">
-                            {links.map((link, i) => (
+                            {navLinks.map((link, i) => (
                                 <motion.div
                                     key={link.to}
                                     initial={{ opacity: 0, y: 24 }}

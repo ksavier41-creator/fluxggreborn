@@ -48,6 +48,10 @@ Screenshoty e2e: home (hero + scroll), płatności (+toast), regulamin (search f
 - Podania zapisują się do MongoDB (POST /api/applications, wymagany JWT), profil pokazuje "Moje podania" ze statusem, admin ma GET /api/admin/applications z kluczem x-admin-key.
 - Link Discord podmieniony na https://discord.gg/SKQ9Qeps38. Link FiveM (GRAJ TERAZ) nadal placeholder.
 
+## Zmiany (2026-08-21, iteracja 4)
+- Panel admina /admin: lista podań z PRZYJMIJ/ODRZUĆ (PATCH statusu), zarządzanie administratorami po Discord ID (dodaj/usuń), bootstrap pierwszego admina kluczem, link ADMIN w navbarze dla adminów, is_admin w profilu użytkownika.
+- Admin = zalogowany użytkownik z Discord ID w kolekcji admins (seed przez ADMIN_DISCORD_IDS lub bootstrap kluczem).
+
 ## Następne kroki
 1. Przetestować pełny flow Steam/Discord w przeglądarce (wymaga kont użytkownika).
 2. FiveM stats po otrzymaniu kodu serwera cfx.re + prawdziwy link fivem://connect.

@@ -20,6 +20,7 @@ import Profile from "@/pages/Profile";
 import About from "@/pages/About";
 import Verification from "@/pages/Verification";
 import Applications from "@/pages/Applications";
+import Admin from "@/pages/Admin";
 import { DiscordCallback, SteamCallback } from "@/pages/AuthCallbacks";
 
 function ScrollManager() {
@@ -89,6 +90,7 @@ function AppShell() {
                     <Route path="/o-nas" element={<PageTransition><About /></PageTransition>} />
                     <Route path="/weryfikacja" element={<PageTransition><Verification /></PageTransition>} />
                     <Route path="/podania" element={<PageTransition><Applications /></PageTransition>} />
+                    <Route path="/admin" element={<PageTransition><Admin /></PageTransition>} />
                     <Route path="/auth/discord/callback" element={<DiscordCallback />} />
                     <Route path="/auth/steam/callback" element={<SteamCallback />} />
                     <Route path="*" element={<PageTransition><Home /></PageTransition>} />

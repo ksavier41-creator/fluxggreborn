@@ -27,6 +27,8 @@ DISCORD_CLIENT_SECRET = os.environ.get("DISCORD_CLIENT_SECRET", "")
 STEAM_API_KEY = os.environ.get("STEAM_API_KEY", "")
 JWT_SECRET = os.environ.get("JWT_SECRET", "")
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "").rstrip("/")
+ADMIN_KEY = os.environ.get("ADMIN_KEY", "")
+ADMIN_DISCORD_IDS = [x.strip() for x in os.environ.get("ADMIN_DISCORD_IDS", "").split(",") if x.strip()]
 
 DISCORD_REDIRECT_URI = f"{PUBLIC_URL}/auth/discord/callback"
 STEAM_RETURN_TO = f"{PUBLIC_URL}/auth/steam/callback"
@@ -34,6 +36,8 @@ STEAM_OPENID_ENDPOINT = "https://steamcommunity.com/openid/login"
 STEAM_ID_RE = re.compile(r"^https://steamcommunity\.com/openid/id/(\d+)$")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_DAYS = 7
+APPLICATION_TYPES = {"whitelist", "administracja", "frakcja", "biznes", "ekipa"}
+APPLICATION_STATUSES = {"pending", "accepted", "rejected"}
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
@@ -66,6 +70,7 @@ class UserOut(BaseModel):
     discord_id: Optional[str] = None
     steam_id: Optional[str] = None
     created_at: str
+    is_admin: bool = False
 
 
 class AuthOut(BaseModel):
@@ -78,23 +83,104 @@ class DiscordExchangeIn(BaseModel):
     code: str
 
 
+class ApplicationCreate(BaseModel):
+    type: str = Field(min_length=2, max_length=40)
+    nick: str = Field(min_length=2, max_length=60)
+    discord: str = Field(min_length=2, max_length=60)
+    steam_id: str = Field(min_length=2, max_length=40)
+    motivation: str = Field(min_length=10, max_length=2000)
+
+
+class ApplicationDocument(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    user_id: Optional[str] = None
+    username: str
+    type: str
+    nick: str
+    discord: str
+    steam_id: str
+    motivation: str
+    status: str = "pending"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def to_mongo(self) -> dict:
+        doc = self.model_dump(by_alias=True, exclude={"id"})
+        if self.id:
+            doc["_id"] = ObjectId(self.id)
+        return doc
+
+    @classmethod
+    def from_mongo(cls, doc: dict) -> "ApplicationDocument":
+        return cls(**doc)
+
+
+class ApplicationOut(BaseModel):
+    id: str
+    username: str
+    type: str
+    nick: str
+    discord: str
+    steam_id: str
+    motivation: str
+    status: str
+    created_at: str
+
+
+class ApplicationStatusIn(BaseModel):
+    status: str
+
+
+class AdminIn(BaseModel):
+    discord_id: str = Field(min_length=5, max_length=30)
+
+
+class AdminOut(BaseModel):
+    discord_id: str
+    added_at: str
+
+
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 
-def to_user_out(doc: dict) -> UserOut:
-    created = doc.get("created_at")
-    if isinstance(created, datetime):
-        created_at = created.isoformat()
-    else:
-        created_at = str(created) if created else datetime.now(timezone.utc).isoformat()
+def iso(dt_value) -> str:
+    if isinstance(dt_value, datetime):
+        return dt_value.isoformat()
+    return str(dt_value) if dt_value else datetime.now(timezone.utc).isoformat()
+
+
+def to_user_out(doc: dict, is_admin: bool = False) -> UserOut:
     return UserOut(
         id=str(doc["_id"]),
         username=doc.get("username", "Gracz"),
         avatar_url=doc.get("avatar_url"),
         discord_id=doc.get("discord_id"),
         steam_id=doc.get("steam_id"),
-        created_at=created_at,
+        created_at=iso(doc.get("created_at")),
+        is_admin=is_admin,
+    )
+
+
+def to_application_out(doc: dict) -> ApplicationOut:
+    return ApplicationOut(
+        id=str(doc["_id"]),
+        username=doc.get("username", ""),
+        type=doc.get("type", ""),
+        nick=doc.get("nick", ""),
+        discord=doc.get("discord", ""),
+        steam_id=doc.get("steam_id", ""),
+        motivation=doc.get("motivation", ""),
+        status=doc.get("status", "pending"),
+        created_at=iso(doc.get("created_at")),
+    )
+
+
+def to_admin_out(doc: dict) -> AdminOut:
+    return AdminOut(
+        discord_id=doc.get("discord_id", ""),
+        added_at=iso(doc.get("added_at")),
     )
 
 
@@ -115,6 +201,33 @@ def bearer_user_id(authorization: Optional[str]) -> Optional[str]:
         return str(payload["sub"])
     except Exception:
         return None
+
+
+async def is_admin_discord(discord_id: Optional[str]) -> bool:
+    if not discord_id:
+        return False
+    return await db.admins.find_one({"discord_id": discord_id}) is not None
+
+
+async def with_admin_flag(doc: dict) -> UserOut:
+    return to_user_out(doc, is_admin=await is_admin_discord(doc.get("discord_id")))
+
+
+def require_user_id(authorization: Optional[str]) -> str:
+    uid = bearer_user_id(authorization)
+    if not uid or not ObjectId.is_valid(uid):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wymagane zalogowanie")
+    return uid
+
+
+async def require_admin_user(authorization: Optional[str]) -> dict:
+    uid = require_user_id(authorization)
+    user_doc = await db.users.find_one({"_id": ObjectId(uid)})
+    if not user_doc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Nie znaleziono użytkownika")
+    if not await is_admin_discord(user_doc.get("discord_id")):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Brak uprawnień administratora")
+    return user_doc
 
 
 async def upsert_user(provider_field: str, provider_id: str, username: str, avatar_url: Optional[str], session_user_id: Optional[str]) -> dict:
@@ -198,7 +311,7 @@ async def discord_exchange(body: DiscordExchangeIn, authorization: Optional[str]
     username = data.get("global_name") or data.get("username") or "Gracz"
 
     user = await upsert_user("discord_id", discord_id, username, avatar_url, bearer_user_id(authorization))
-    return AuthOut(access_token=jwt_for(str(user["_id"])), user=to_user_out(user))
+    return AuthOut(access_token=jwt_for(str(user["_id"])), user=await with_admin_flag(user))
 
 
 @api_router.get("/auth/steam/start")
@@ -274,105 +387,26 @@ async def steam_verify(payload: dict = Body(...), authorization: Optional[str] =
     avatar_url = profile.get("avatarfull") or profile.get("avatarmedium") or profile.get("avatar")
 
     user = await upsert_user("steam_id", steam_id, username, avatar_url, bearer_user_id(authorization))
-    return AuthOut(access_token=jwt_for(str(user["_id"])), user=to_user_out(user))
+    return AuthOut(access_token=jwt_for(str(user["_id"])), user=await with_admin_flag(user))
 
 
 @api_router.get("/auth/me", response_model=UserOut)
 async def auth_me(authorization: Optional[str] = Header(default=None)):
-    uid = bearer_user_id(authorization)
-    if not uid or not ObjectId.is_valid(uid):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Brak autoryzacji")
+    uid = require_user_id(authorization)
     doc = await db.users.find_one({"_id": ObjectId(uid)})
     if not doc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Nie znaleziono użytkownika")
-    return to_user_out(doc)
+    return await with_admin_flag(doc)
 
 
 @api_router.delete("/auth/unlink/{provider}", response_model=UserOut)
 async def unlink_provider(provider: str, authorization: Optional[str] = Header(default=None)):
     if provider not in {"discord", "steam"}:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nieznany dostawca")
-    uid = bearer_user_id(authorization)
-    if not uid or not ObjectId.is_valid(uid):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Brak autoryzacji")
+    uid = require_user_id(authorization)
     await db.users.update_one({"_id": ObjectId(uid)}, {"$unset": {f"{provider}_id": ""}})
     doc = await db.users.find_one({"_id": ObjectId(uid)})
-    return to_user_out(doc)
-
-
-ADMIN_KEY = os.environ.get("ADMIN_KEY", "")
-APPLICATION_TYPES = {"whitelist", "administracja", "frakcja", "biznes", "ekipa"}
-
-
-class ApplicationCreate(BaseModel):
-    type: str = Field(min_length=2, max_length=40)
-    nick: str = Field(min_length=2, max_length=60)
-    discord: str = Field(min_length=2, max_length=60)
-    steam_id: str = Field(min_length=2, max_length=40)
-    motivation: str = Field(min_length=10, max_length=2000)
-
-
-class ApplicationDocument(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    user_id: Optional[str] = None
-    username: str
-    type: str
-    nick: str
-    discord: str
-    steam_id: str
-    motivation: str
-    status: str = "pending"
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    def to_mongo(self) -> dict:
-        doc = self.model_dump(by_alias=True, exclude={"id"})
-        if self.id:
-            doc["_id"] = ObjectId(self.id)
-        return doc
-
-    @classmethod
-    def from_mongo(cls, doc: dict) -> "ApplicationDocument":
-        return cls(**doc)
-
-
-class ApplicationOut(BaseModel):
-    id: str
-    username: str
-    type: str
-    nick: str
-    discord: str
-    steam_id: str
-    motivation: str
-    status: str
-    created_at: str
-
-
-def to_application_out(doc: dict) -> ApplicationOut:
-    created = doc.get("created_at")
-    if isinstance(created, datetime):
-        created_at = created.isoformat()
-    else:
-        created_at = str(created) if created else datetime.now(timezone.utc).isoformat()
-    return ApplicationOut(
-        id=str(doc["_id"]),
-        username=doc.get("username", ""),
-        type=doc.get("type", ""),
-        nick=doc.get("nick", ""),
-        discord=doc.get("discord", ""),
-        steam_id=doc.get("steam_id", ""),
-        motivation=doc.get("motivation", ""),
-        status=doc.get("status", "pending"),
-        created_at=created_at,
-    )
-
-
-def require_user_id(authorization: Optional[str]) -> str:
-    uid = bearer_user_id(authorization)
-    if not uid or not ObjectId.is_valid(uid):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wymagane zalogowanie")
-    return uid
+    return await with_admin_flag(doc)
 
 
 @api_router.post("/applications", response_model=ApplicationOut, status_code=201)
@@ -401,11 +435,66 @@ async def my_applications(authorization: Optional[str] = Header(default=None)):
 
 
 @api_router.get("/admin/applications", response_model=list[ApplicationOut])
-async def admin_applications(x_admin_key: Optional[str] = Header(default=None)):
-    if not ADMIN_KEY or x_admin_key != ADMIN_KEY:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Brak dostępu")
+async def admin_applications(authorization: Optional[str] = Header(default=None)):
+    await require_admin_user(authorization)
     docs = await db.applications.find().sort("created_at", -1).to_list(500)
     return [to_application_out(doc) for doc in docs]
+
+
+@api_router.patch("/admin/applications/{application_id}", response_model=ApplicationOut)
+async def admin_update_application(application_id: str, body: ApplicationStatusIn, authorization: Optional[str] = Header(default=None)):
+    await require_admin_user(authorization)
+    if body.status not in APPLICATION_STATUSES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nieprawidłowy status")
+    if not ObjectId.is_valid(application_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nie znaleziono podania")
+    result = await db.applications.update_one(
+        {"_id": ObjectId(application_id)},
+        {"$set": {"status": body.status}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nie znaleziono podania")
+    doc = await db.applications.find_one({"_id": ObjectId(application_id)})
+    return to_application_out(doc)
+
+
+@api_router.get("/admin/admins", response_model=list[AdminOut])
+async def admin_list_admins(authorization: Optional[str] = Header(default=None)):
+    await require_admin_user(authorization)
+    docs = await db.admins.find().sort("added_at", 1).to_list(200)
+    return [to_admin_out(doc) for doc in docs]
+
+
+@api_router.post("/admin/admins", response_model=AdminOut, status_code=201)
+async def admin_add_admin(body: AdminIn, authorization: Optional[str] = Header(default=None)):
+    await require_admin_user(authorization)
+    await db.admins.update_one(
+        {"discord_id": body.discord_id},
+        {"$setOnInsert": {"discord_id": body.discord_id, "added_at": datetime.now(timezone.utc)}},
+        upsert=True,
+    )
+    doc = await db.admins.find_one({"discord_id": body.discord_id})
+    return to_admin_out(doc)
+
+
+@api_router.delete("/admin/admins/{discord_id}", status_code=204)
+async def admin_remove_admin(discord_id: str, authorization: Optional[str] = Header(default=None)):
+    current = await require_admin_user(authorization)
+    if current.get("discord_id") == discord_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nie możesz usunąć samego siebie")
+    await db.admins.delete_one({"discord_id": discord_id})
+
+
+@api_router.post("/admin/bootstrap", status_code=201)
+async def admin_bootstrap(body: AdminIn, x_admin_key: Optional[str] = Header(default=None)):
+    if not ADMIN_KEY or x_admin_key != ADMIN_KEY:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Nieprawidłowy klucz administracyjny")
+    await db.admins.update_one(
+        {"discord_id": body.discord_id},
+        {"$setOnInsert": {"discord_id": body.discord_id, "added_at": datetime.now(timezone.utc)}},
+        upsert=True,
+    )
+    return {"ok": True, "discord_id": body.discord_id}
 
 
 app.include_router(api_router)
@@ -429,6 +518,13 @@ logger = logging.getLogger(__name__)
 async def create_indexes():
     await db.users.create_index("discord_id", unique=True, sparse=True)
     await db.users.create_index("steam_id", unique=True, sparse=True)
+    await db.admins.create_index("discord_id", unique=True)
+    for discord_id in ADMIN_DISCORD_IDS:
+        await db.admins.update_one(
+            {"discord_id": discord_id},
+            {"$setOnInsert": {"discord_id": discord_id, "added_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
 
 
 @app.on_event("shutdown")

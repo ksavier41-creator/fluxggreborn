@@ -16,6 +16,7 @@ export interface User {
     discord_id: string | null;
     steam_id: string | null;
     created_at: string;
+    is_admin?: boolean;
     ranks?: string[];
     demo?: boolean;
 }
