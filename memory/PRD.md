@@ -33,11 +33,17 @@ Nowoczesna, minimalistyczna, premium strona dla serwera FiveM RP "FluxGG Reborn"
 Screenshoty e2e: home (hero + scroll), płatności (+toast), regulamin (search filtruje), login demo → profil, weryfikacja (pending→verified), podania (modal), mobile (burger + menu). Wszystkie przeszły.
 
 ## Backlog
-- P0: Prawdziwy OAuth Discord + Steam OpenID (backend FastAPI), podpięcie płatności (Stripe/PayPal), zapis podań do bazy.
-- P1: Statystyki serwera na żywo z API FiveM, prawdziwy link Discord/FiveM connect (obecnie placeholdery), edycja regulaminu z poziomu admina.
-- P2: Blog/aktualności, changelog, panel administracyjny do podań, i18n (PL/EN).
+- P0: Discord OAuth — uzupełnić DISCORD_CLIENT_ID/SECRET (redirect: /auth/discord/callback); statystyki na żywo z FiveM (użytkownik: "potem podepniemy").
+- P1: Zapis podań do bazy, panel admina do podań, edycja regulaminu z poziomu admina.
+- P2: Blog/aktualności, changelog, i18n (PL/EN).
+
+## Zmiany (2026-08-21, iteracja 2)
+- Usunięto: custom cursor, marquee, całą sekcję/stronę Płatności (+ kategoria Płatności w regulaminie, historia zakupów w profilu).
+- Navbar: dodano PODANIA i WERYFIKACJĘ do głównego menu.
+- Backend włączony: prawdziwe logowanie Steam OpenID (aktywne, klucz API w env) + Discord OAuth (kod gotowy, czeka na Client ID/Secret), JWT, linkowanie kont, DELETE unlink.
+- Frontend: AuthContext na prawdziwej sesji (GET /api/auth/me), strony callback /auth/discord/callback i /auth/steam/callback, konto demo jako podgląd.
 
 ## Następne kroki
-1. Podmienić DISCORD_URL i FIVEM_CONNECT_URL na prawdziwe adresy.
-2. Backend auth: /api/auth/discord, /api/auth/steam + sesje.
-3. Płatności: checkout + webhook aktywujący produkty.
+1. Użytkownik podaje Discord Client ID + Secret → wpisać do backend/.env, zrestartować backend.
+2. Przetestować pełny flow Steam w przeglądarce (wymaga konta Steam).
+3. FiveM stats po otrzymaniu kodu serwera cfx.re.

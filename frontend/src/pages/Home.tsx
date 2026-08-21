@@ -4,16 +4,9 @@ import { ArrowDown, ArrowUpRight } from "lucide-react";
 import { EASE } from "@/lib/motion";
 import { useIntro } from "@/lib/intro";
 import { HeroScene } from "@/components/HeroScene";
-import { Marquee } from "@/components/Marquee";
 import { Reveal } from "@/components/Reveal";
-import { TiltCard } from "@/components/TiltCard";
 import { Counter } from "@/components/Counter";
-import {
-    products,
-    stats,
-    DISCORD_URL,
-    FIVEM_CONNECT_URL,
-} from "@/data/content";
+import { stats, DISCORD_URL, FIVEM_CONNECT_URL } from "@/data/content";
 
 const lineVariants: Variants = {
     hidden: { y: "115%" },
@@ -170,8 +163,6 @@ export default function Home() {
                 </motion.div>
             </section>
 
-            <Marquee />
-
             <section className="max-w-[1600px] mx-auto px-6 md:px-12 py-24 md:py-40">
                 <Reveal>
                     <p className="text-xs tracking-[0.25em] uppercase text-[#737373] font-medium mb-16">
@@ -194,70 +185,6 @@ export default function Home() {
                             </div>
                         </Reveal>
                     ))}
-                </div>
-            </section>
-
-            <section className="max-w-[1600px] mx-auto px-6 md:px-12 pb-24 md:pb-40">
-                <div className="flex flex-wrap items-end justify-between gap-6 mb-14">
-                    <Reveal>
-                        <div>
-                            <p className="text-xs tracking-[0.25em] uppercase text-[#737373] font-medium mb-5">
-                                Sklep
-                            </p>
-                            <h2 className="font-display text-4xl md:text-5xl tracking-tight font-medium text-white">
-                                Wybrane produkty
-                            </h2>
-                        </div>
-                    </Reveal>
-                    <Reveal delay={0.1}>
-                        <Link
-                            to="/platnosci"
-                            data-testid="home-all-products-link"
-                            className="group inline-flex items-center gap-2 text-xs tracking-[0.2em] text-white/60 hover:text-white transition-colors duration-300 border-b border-white/20 hover:border-white pb-1"
-                        >
-                            WSZYSTKIE PRODUKTY
-                            <ArrowUpRight
-                                size={14}
-                                strokeWidth={1.5}
-                                className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                            />
-                        </Link>
-                    </Reveal>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {products
-                        .filter((p) => p.featured)
-                        .concat(products.filter((p) => !p.featured))
-                        .slice(0, 3)
-                        .map((product, i) => (
-                            <Reveal key={product.id} delay={i * 0.1}>
-                                <TiltCard
-                                    testId={`home-product-card-${product.id}`}
-                                    className="p-8 md:p-10 flex flex-col"
-                                >
-                                    <p className="text-xs tracking-[0.25em] text-[#737373]">
-                                        {product.period
-                                            ? "PAKIET"
-                                            : "JEDNORAZOWO"}
-                                    </p>
-                                    <h3 className="mt-4 font-display text-2xl tracking-tight text-white">
-                                        {product.name}
-                                    </h3>
-                                    <p className="mt-3 text-sm text-[#A3A3A3] leading-relaxed flex-1">
-                                        {product.description}
-                                    </p>
-                                    <p className="mt-8 font-display text-3xl font-light text-white">
-                                        {product.price}
-                                        {product.period && (
-                                            <span className="text-sm text-[#737373]">
-                                                {" "}
-                                                {product.period}
-                                            </span>
-                                        )}
-                                    </p>
-                                </TiltCard>
-                            </Reveal>
-                        ))}
                 </div>
             </section>
 

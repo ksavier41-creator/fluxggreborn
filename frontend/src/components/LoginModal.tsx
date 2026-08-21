@@ -9,7 +9,7 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ open, onClose }: LoginModalProps) {
-    const { loginDemo } = useAuth();
+    const { loginDemo, loginWithDiscord, loginWithSteam } = useAuth();
 
     return (
         <AnimatePresence>
@@ -50,40 +50,34 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
                             Zaloguj się
                         </h3>
                         <p className="text-sm text-[#A3A3A3] leading-relaxed mb-8">
-                            Logowanie przez Discord i Steam jest w trakcie
-                            przygotowań. Na ten moment możesz zobaczyć panel w
-                            trybie demonstracyjnym.
+                            Zaloguj się swoim kontem Discord lub Steam. Bez
+                            haseł — autoryzacja odbywa się na oficjalnych
+                            stronach dostawców.
                         </p>
                         <div className="space-y-3">
+                            <button
+                                data-testid="login-discord-button"
+                                onClick={() => void loginWithDiscord()}
+                                className="w-full bg-white text-black font-medium tracking-[0.2em] text-sm py-3.5 hover:bg-[#E5E5E5] active:scale-[0.98] transition-[background-color,transform] duration-200"
+                            >
+                                KONTYNUUJ PRZEZ DISCORD
+                            </button>
+                            <button
+                                data-testid="login-steam-button"
+                                onClick={() => void loginWithSteam()}
+                                className="w-full bg-transparent border border-[#333] text-white text-sm tracking-[0.2em] py-3.5 hover:border-white/60 active:scale-[0.98] transition-[border-color,transform] duration-200"
+                            >
+                                KONTYNUUJ PRZEZ STEAM
+                            </button>
                             <button
                                 data-testid="login-demo-button"
                                 onClick={() => {
                                     loginDemo();
                                     onClose();
                                 }}
-                                className="w-full bg-white text-black font-medium tracking-wide text-sm py-3.5 hover:bg-[#E5E5E5] active:scale-[0.98] transition-[background-color,transform] duration-200"
+                                className="w-full text-[11px] tracking-[0.25em] text-white/40 hover:text-white transition-colors duration-200 py-2"
                             >
-                                KONTYNUUJ JAKO KONTO DEMO
-                            </button>
-                            <button
-                                data-testid="login-discord-button"
-                                disabled
-                                className="w-full bg-transparent border border-[#262626] text-white/40 text-sm tracking-wide py-3.5 cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                DISCORD
-                                <span className="text-[10px] tracking-[0.2em] border border-white/15 px-2 py-0.5">
-                                    WKRÓTCE
-                                </span>
-                            </button>
-                            <button
-                                data-testid="login-steam-button"
-                                disabled
-                                className="w-full bg-transparent border border-[#262626] text-white/40 text-sm tracking-wide py-3.5 cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                STEAM
-                                <span className="text-[10px] tracking-[0.2em] border border-white/15 px-2 py-0.5">
-                                    WKRÓTCE
-                                </span>
+                                PODGLĄD KONTA DEMO
                             </button>
                         </div>
                     </motion.div>

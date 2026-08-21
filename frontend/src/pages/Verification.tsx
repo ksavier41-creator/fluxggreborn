@@ -1,55 +1,46 @@
-import { Gamepad2, Loader2, MessageSquare } from "lucide-react";
+import { BadgeCheck, Gamepad2, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-    useAuth,
-    type VerificationState,
-} from "@/auth/AuthContext";
+import { useAuth } from "@/auth/AuthContext";
 import { Reveal } from "@/components/Reveal";
 import { TiltCard } from "@/components/TiltCard";
 import { SectionHeading } from "@/components/SectionHeading";
 
-const statusLabels: Record<VerificationState, string> = {
-    none: "NIEPOŁĄCZONO",
-    pending: "WERYFIKOWANIE",
-    verified: "ZWERYFIKOWANO",
-};
-
 function StatusPill({
-    status,
+    connected,
     testId,
 }: {
-    status: VerificationState;
+    connected: boolean;
     testId: string;
 }) {
     return (
         <span
             data-testid={testId}
             className={`inline-flex items-center gap-2 border px-3.5 py-1.5 text-[10px] tracking-[0.2em] transition-colors duration-500 ${
-                status === "verified"
+                connected
                     ? "border-white/40 text-white text-glow"
-                    : status === "pending"
-                      ? "border-white/20 text-white/70"
-                      : "border-white/10 text-white/40"
+                    : "border-white/10 text-white/40"
             }`}
         >
-            {status === "pending" && (
-                <Loader2 size={12} strokeWidth={1.5} className="animate-spin" />
-            )}
-            {statusLabels[status]}
+            {connected && <BadgeCheck size={12} strokeWidth={1.5} />}
+            {connected ? "ZWERYFIKOWANO" : "NIEPOŁĄCZONO"}
         </span>
     );
 }
 
 interface ProviderCardProps {
     provider: "steam" | "discord";
-    status: VerificationState;
+    connected: boolean;
+    connectedId: string | null;
+    isDemo: boolean;
     onConnect: () => void;
     onDisconnect: () => void;
 }
 
 function ProviderCard({
     provider,
-    status,
+    connected,
+    connectedId,
+    isDemo,
     onConnect,
     onDisconnect,
 }: ProviderCardProps) {
@@ -57,8 +48,8 @@ function ProviderCard({
     const Icon = isSteam ? Gamepad2 : MessageSquare;
     const name = isSteam ? "STEAM" : "DISCORD";
     const description = isSteam
-        ? "Połącz konto Steam, aby potwierdzić posiadanie GTA V i odblokować wejście na serwer."
-        : "Połącz konto Discord, aby synchronizować rangi, powiadomienia i dostęp do społeczności.";
+        ? "Połącz konto Steam przez oficjalne logowanie OpenID, aby potwierdzić posiadanie GTA V i odblokować wejście na serwer."
+        : "Połącz konto Discord przez oficjalne OAuth, aby synchronizować rangi, powiadomienia i dostęp do społeczności.";
 
     return (
         <TiltCard
@@ -69,34 +60,43 @@ function ProviderCard({
             <h3 className="mt-8 font-display text-3xl md:text-4xl font-light tracking-tight text-white">
                 {name}
             </h3>
-            <p className="mt-4 text-sm text-[#A3A3A3] leading-relaxed flex-1">
+            <p className="mt-4 text-sm text-[#A3A3A3] leading-relaxed">
                 {description}
             </p>
-            <div className="mt-8">
+            <div className="mt-8 flex flex-wrap items-center gap-4">
                 <StatusPill
-                    status={status}
+                    connected={connected}
                     testId={`verification-status-${provider}`}
                 />
+                {connected && connectedId && (
+                    <span className="font-mono text-xs text-white/50">
+                        {connectedId}
+                    </span>
+                )}
             </div>
             <div className="mt-8 w-full">
-                {status === "verified" ? (
-                    <button
-                        data-testid={`verification-disconnect-${provider}`}
-                        onClick={onDisconnect}
-                        className="w-full border border-[#333] text-white/60 text-sm tracking-[0.2em] py-3.5 hover:border-white/50 hover:text-white transition-[border-color,color] duration-300"
-                    >
-                        ODŁĄCZ {name}
-                    </button>
+                {connected ? (
+                    isDemo ? (
+                        <p className="text-xs text-[#737373] leading-relaxed">
+                            Konto demo — odłączanie dostępne po prawdziwym
+                            zalogowaniu.
+                        </p>
+                    ) : (
+                        <button
+                            data-testid={`verification-disconnect-${provider}`}
+                            onClick={onDisconnect}
+                            className="w-full border border-[#333] text-white/60 text-sm tracking-[0.2em] py-3.5 hover:border-white/50 hover:text-white transition-[border-color,color] duration-300"
+                        >
+                            ODŁĄCZ {name}
+                        </button>
+                    )
                 ) : (
                     <button
                         data-testid={`verification-connect-${provider}`}
                         onClick={onConnect}
-                        disabled={status === "pending"}
-                        className="w-full bg-white text-black text-sm font-medium tracking-[0.2em] py-3.5 hover:bg-[#E5E5E5] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none transition-[background-color,transform] duration-200"
+                        className="w-full bg-white text-black text-sm font-medium tracking-[0.2em] py-3.5 hover:bg-[#E5E5E5] active:scale-[0.98] transition-[background-color,transform] duration-200"
                     >
-                        {status === "pending"
-                            ? "WERYFIKOWANIE…"
-                            : `POŁĄCZ ${name}`}
+                        POŁĄCZ {name}
                     </button>
                 )}
             </div>
@@ -107,14 +107,27 @@ function ProviderCard({
 export default function Verification() {
     const {
         isAuthenticated,
-        steamStatus,
-        discordStatus,
-        connectSteam,
-        connectDiscord,
-        disconnect,
+        loading,
+        user,
+        loginWithSteam,
+        loginWithDiscord,
+        unlinkAccount,
     } = useAuth();
 
-    if (!isAuthenticated) {
+    if (loading) {
+        return (
+            <div
+                data-testid="verification-page"
+                className="min-h-screen flex items-center justify-center"
+            >
+                <p className="text-xs tracking-[0.25em] uppercase text-[#737373]">
+                    Ładowanie…
+                </p>
+            </div>
+        );
+    }
+
+    if (!isAuthenticated || !user) {
         return (
             <div
                 data-testid="verification-page"
@@ -129,8 +142,7 @@ export default function Verification() {
                     <div className="border border-white/10 bg-[#0A0A0A] p-10 md:p-16 max-w-2xl">
                         <p className="text-[#A3A3A3] text-sm leading-relaxed mb-8">
                             Weryfikacja wymaga zalogowania. Użyj przycisku
-                            ZALOGUJ SIĘ w nawigacji, aby kontynuować jako konto
-                            demo.
+                            ZALOGUJ SIĘ w nawigacji.
                         </p>
                         <Link
                             to="/profil"
@@ -159,25 +171,28 @@ export default function Verification() {
                 <Reveal>
                     <ProviderCard
                         provider="steam"
-                        status={steamStatus}
-                        onConnect={connectSteam}
-                        onDisconnect={() => disconnect("steam")}
+                        connected={Boolean(user.steam_id)}
+                        connectedId={user.steam_id}
+                        isDemo={Boolean(user.demo)}
+                        onConnect={() => void loginWithSteam()}
+                        onDisconnect={() => void unlinkAccount("steam")}
                     />
                 </Reveal>
                 <Reveal delay={0.1}>
                     <ProviderCard
                         provider="discord"
-                        status={discordStatus}
-                        onConnect={connectDiscord}
-                        onDisconnect={() => disconnect("discord")}
+                        connected={Boolean(user.discord_id)}
+                        connectedId={user.discord_id}
+                        isDemo={Boolean(user.demo)}
+                        onConnect={() => void loginWithDiscord()}
+                        onDisconnect={() => void unlinkAccount("discord")}
                     />
                 </Reveal>
             </div>
             <Reveal delay={0.2}>
                 <p className="mt-14 text-xs text-[#737373] max-w-xl leading-relaxed">
-                    Obecny proces weryfikacji jest demonstracyjny. Docelowo
-                    połączenie odbędzie się przez oficjalne OAuth 2.0 (Discord)
-                    oraz OpenID (Steam) — bez podawania haseł.
+                    Połączenie odbywa się przez oficjalne OAuth 2.0 (Discord)
+                    oraz OpenID (Steam) — nigdy nie prosimy o hasła.
                 </p>
             </Reveal>
         </div>

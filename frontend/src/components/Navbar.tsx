@@ -7,15 +7,11 @@ import { LoginModal } from "@/components/LoginModal";
 import { EASE } from "@/lib/motion";
 
 const links = [
-    { to: "/platnosci", label: "PŁATNOŚCI", testId: "nav-link-payments" },
     { to: "/regulamin", label: "REGULAMIN", testId: "nav-link-rules" },
+    { to: "/podania", label: "PODANIA", testId: "nav-link-applications" },
+    { to: "/weryfikacja", label: "WERYFIKACJA", testId: "nav-link-verification" },
     { to: "/profil", label: "PROFIL", testId: "nav-link-profile" },
     { to: "/o-nas", label: "O NAS", testId: "nav-link-about" },
-];
-
-const mobileExtra = [
-    { to: "/weryfikacja", label: "WERYFIKACJA", testId: "mobile-nav-link-verification" },
-    { to: "/podania", label: "PODANIA", testId: "mobile-nav-link-applications" },
 ];
 
 export function Navbar() {
@@ -59,7 +55,7 @@ export function Navbar() {
                         </span>
                     </Link>
 
-                    <nav className="hidden lg:flex items-center gap-10">
+                    <nav className="hidden lg:flex items-center gap-7">
                         {links.map((link) => (
                             <NavLink
                                 key={link.to}
@@ -142,7 +138,7 @@ export function Navbar() {
                         transition={{ duration: 0.35 }}
                     >
                         <nav className="space-y-2">
-                            {[...links, ...mobileExtra].map((link, i) => (
+                            {links.map((link, i) => (
                                 <motion.div
                                     key={link.to}
                                     initial={{ opacity: 0, y: 24 }}

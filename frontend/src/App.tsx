@@ -13,15 +13,14 @@ import { IntroProvider, useIntro } from "@/lib/intro";
 import { EASE } from "@/lib/motion";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { CustomCursor } from "@/components/CustomCursor";
 import { PageLoader } from "@/components/PageLoader";
 import Home from "@/pages/Home";
-import Payments from "@/pages/Payments";
 import Rules from "@/pages/Rules";
 import Profile from "@/pages/Profile";
 import About from "@/pages/About";
 import Verification from "@/pages/Verification";
 import Applications from "@/pages/Applications";
+import { DiscordCallback, SteamCallback } from "@/pages/AuthCallbacks";
 
 function ScrollManager() {
     const location = useLocation();
@@ -73,7 +72,6 @@ function AppShell() {
     return (
         <div className="min-h-screen bg-[#050505] text-white">
             <div className="noise-overlay" aria-hidden />
-            <CustomCursor />
             <AnimatePresence>
                 {!introDone && (
                     <PageLoader
@@ -86,12 +84,13 @@ function AppShell() {
             <AnimatePresence mode="wait">
                 <Routes location={location} key={location.pathname}>
                     <Route path="/" element={<PageTransition><Home /></PageTransition>} />
-                    <Route path="/platnosci" element={<PageTransition><Payments /></PageTransition>} />
                     <Route path="/regulamin" element={<PageTransition><Rules /></PageTransition>} />
                     <Route path="/profil" element={<PageTransition><Profile /></PageTransition>} />
                     <Route path="/o-nas" element={<PageTransition><About /></PageTransition>} />
                     <Route path="/weryfikacja" element={<PageTransition><Verification /></PageTransition>} />
                     <Route path="/podania" element={<PageTransition><Applications /></PageTransition>} />
+                    <Route path="/auth/discord/callback" element={<DiscordCallback />} />
+                    <Route path="/auth/steam/callback" element={<SteamCallback />} />
                     <Route path="*" element={<PageTransition><Home /></PageTransition>} />
                 </Routes>
             </AnimatePresence>

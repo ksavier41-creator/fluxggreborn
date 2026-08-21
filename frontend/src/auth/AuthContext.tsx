@@ -2,178 +2,223 @@ import {
     createContext,
     useCallback,
     useContext,
+    useEffect,
     useMemo,
     useState,
     type ReactNode,
 } from "react";
 import { toast } from "sonner";
 
-export type VerificationState = "none" | "pending" | "verified";
-
-export interface Purchase {
+export interface User {
     id: string;
-    product: string;
-    date: string;
-    amount: string;
-    status: string;
-}
-
-export interface DemoUser {
     username: string;
-    avatarUrl: string;
-    discordId: string;
-    steamId: string;
-    joinedAt: string;
-    ranks: string[];
-    purchases: Purchase[];
-}
-
-interface StoredAuth {
-    user: DemoUser;
-    steamStatus: VerificationState;
-    discordStatus: VerificationState;
+    avatar_url: string | null;
+    discord_id: string | null;
+    steam_id: string | null;
+    created_at: string;
+    ranks?: string[];
+    demo?: boolean;
 }
 
 interface AuthContextValue {
-    user: DemoUser | null;
+    user: User | null;
     isAuthenticated: boolean;
-    steamStatus: VerificationState;
-    discordStatus: VerificationState;
+    loading: boolean;
+    loginWithDiscord: () => Promise<void>;
+    loginWithSteam: () => Promise<void>;
+    completeDiscordLogin: (code: string) => Promise<void>;
+    completeSteamLogin: (params: Record<string, string>) => Promise<void>;
+    unlinkAccount: (provider: "discord" | "steam") => Promise<void>;
     loginDemo: () => void;
     logout: () => void;
-    connectSteam: () => void;
-    connectDiscord: () => void;
-    disconnect: (provider: "steam" | "discord") => void;
 }
 
-const STORAGE_KEY = "fluxgg-demo-auth-v1";
+const TOKEN_KEY = "fluxgg-auth-token";
+const DEMO_KEY = "fluxgg-demo-user";
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const DEMO_USER: DemoUser = {
+const DEMO_USER: User = {
+    id: "demo",
     username: "xNova",
-    avatarUrl: "",
-    discordId: "482910384756102234",
-    steamId: "76561198206481723",
-    joinedAt: "14.03.2024",
+    avatar_url: null,
+    discord_id: "482910384756102234",
+    steam_id: "76561198206481723",
+    created_at: "2024-03-14T00:00:00.000Z",
     ranks: ["FOUNDER", "VIP GOLD", "WHITELIST"],
-    purchases: [
-        {
-            id: "FX-2091",
-            product: "VIP GOLD — 30 dni",
-            date: "02.06.2026",
-            amount: "99,99 zł",
-            status: "Opłacone",
-        },
-        {
-            id: "FX-1740",
-            product: "Whitelist Priority",
-            date: "18.04.2026",
-            amount: "19,99 zł",
-            status: "Opłacone",
-        },
-        {
-            id: "FX-1203",
-            product: "Flux Coins ×5 000",
-            date: "03.03.2026",
-            amount: "49,99 zł",
-            status: "Opłacone",
-        },
-    ],
+    demo: true,
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function readStored(): StoredAuth | null {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? (JSON.parse(raw) as StoredAuth) : null;
-    } catch {
-        localStorage.removeItem(STORAGE_KEY);
-        return null;
-    }
+function getToken() {
+    return localStorage.getItem(TOKEN_KEY);
 }
 
-function persist(state: StoredAuth | null) {
-    if (state) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    else localStorage.removeItem(STORAGE_KEY);
+async function parseError(res: Response): Promise<never> {
+    let detail = "Wystąpił błąd";
+    try {
+        const data = await res.json();
+        if (data?.detail) detail = data.detail;
+    } catch {
+        /* keep default */
+    }
+    throw new Error(detail);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [stored, setStored] = useState<StoredAuth | null>(() => readStored());
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    const loginDemo = useCallback(() => {
-        const next: StoredAuth = {
-            user: DEMO_USER,
-            steamStatus: "verified",
-            discordStatus: "verified",
-        };
-        persist(next);
-        setStored(next);
-        toast.success("Zalogowano jako konto demo", {
-            description: "Prawdziwe logowanie Discord / Steam — wkrótce.",
-        });
+    useEffect(() => {
+        const demoRaw = localStorage.getItem(DEMO_KEY);
+        if (demoRaw) {
+            try {
+                setUser(JSON.parse(demoRaw) as User);
+            } catch {
+                localStorage.removeItem(DEMO_KEY);
+            }
+            setLoading(false);
+            return;
+        }
+        const token = getToken();
+        if (!token) {
+            setLoading(false);
+            return;
+        }
+        fetch(`${API}/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then(async (res) => {
+                if (!res.ok) {
+                    localStorage.removeItem(TOKEN_KEY);
+                    return;
+                }
+                setUser((await res.json()) as User);
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
     }, []);
 
-    const logout = useCallback(() => {
-        persist(null);
-        setStored(null);
-        toast("Wylogowano");
-    }, []);
-
-    const connect = useCallback(
-        (provider: "steam" | "discord") => {
-            setStored((prev) => {
-                if (!prev) return prev;
-                const key =
-                    provider === "steam" ? "steamStatus" : "discordStatus";
-                if (prev[key] !== "none") return prev;
-                const next = { ...prev, [key]: "pending" as const };
-                persist(next);
-                return next;
-            });
-            window.setTimeout(() => {
-                setStored((prev) => {
-                    if (!prev) return prev;
-                    const key =
-                        provider === "steam" ? "steamStatus" : "discordStatus";
-                    if (prev[key] !== "pending") return prev;
-                    const next = { ...prev, [key]: "verified" as const };
-                    persist(next);
-                    return next;
-                });
-                toast.success(
-                    provider === "steam"
-                        ? "Konto Steam zweryfikowane"
-                        : "Konto Discord zweryfikowane",
-                    { description: "Proces demonstracyjny — OAuth wkrótce." },
+    const startOAuth = useCallback(
+        async (path: string, providerName: string) => {
+            try {
+                const res = await fetch(`${API}${path}`);
+                if (!res.ok) await parseError(res);
+                const { url } = await res.json();
+                window.location.assign(url);
+            } catch (e) {
+                toast.error(
+                    e instanceof Error
+                        ? e.message
+                        : `Logowanie ${providerName} nie powiodło się`,
                 );
-            }, 1800);
+            }
         },
         [],
     );
 
-    const disconnect = useCallback((provider: "steam" | "discord") => {
-        setStored((prev) => {
-            if (!prev) return prev;
-            const key = provider === "steam" ? "steamStatus" : "discordStatus";
-            const next = { ...prev, [key]: "none" as const };
-            persist(next);
-            return next;
+    const loginWithDiscord = useCallback(
+        () => startOAuth("/auth/discord/start", "Discord"),
+        [startOAuth],
+    );
+    const loginWithSteam = useCallback(
+        () => startOAuth("/auth/steam/start", "Steam"),
+        [startOAuth],
+    );
+
+    const completeDiscordLogin = useCallback(async (code: string) => {
+        const token = getToken();
+        const res = await fetch(`${API}/auth/discord/exchange`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ code }),
         });
+        if (!res.ok) await parseError(res);
+        const data = await res.json();
+        localStorage.removeItem(DEMO_KEY);
+        localStorage.setItem(TOKEN_KEY, data.access_token);
+        setUser(data.user as User);
+        toast.success("Zalogowano przez Discord");
+    }, []);
+
+    const completeSteamLogin = useCallback(
+        async (params: Record<string, string>) => {
+            const token = getToken();
+            const res = await fetch(`${API}/auth/steam/verify`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify(params),
+            });
+            if (!res.ok) await parseError(res);
+            const data = await res.json();
+            localStorage.removeItem(DEMO_KEY);
+            localStorage.setItem(TOKEN_KEY, data.access_token);
+            setUser(data.user as User);
+            toast.success("Konto Steam połączone");
+        },
+        [],
+    );
+
+    const unlinkAccount = useCallback(
+        async (provider: "discord" | "steam") => {
+            const token = getToken();
+            if (!token) return;
+            const res = await fetch(`${API}/auth/unlink/${provider}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) await parseError(res);
+            setUser((await res.json()) as User);
+            toast.success("Odłączono konto");
+        },
+        [],
+    );
+
+    const loginDemo = useCallback(() => {
+        localStorage.setItem(DEMO_KEY, JSON.stringify(DEMO_USER));
+        setUser(DEMO_USER);
+        toast.success("Włączono podgląd konta demo", {
+            description: "To nie jest prawdziwe logowanie.",
+        });
+    }, []);
+
+    const logout = useCallback(() => {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(DEMO_KEY);
+        setUser(null);
+        toast("Wylogowano");
     }, []);
 
     const value = useMemo<AuthContextValue>(
         () => ({
-            user: stored?.user ?? null,
-            isAuthenticated: stored !== null,
-            steamStatus: stored?.steamStatus ?? "none",
-            discordStatus: stored?.discordStatus ?? "none",
+            user,
+            isAuthenticated: user !== null,
+            loading,
+            loginWithDiscord,
+            loginWithSteam,
+            completeDiscordLogin,
+            completeSteamLogin,
+            unlinkAccount,
             loginDemo,
             logout,
-            connectSteam: () => connect("steam"),
-            connectDiscord: () => connect("discord"),
-            disconnect,
         }),
-        [stored, loginDemo, logout, connect, disconnect],
+        [
+            user,
+            loading,
+            loginWithDiscord,
+            loginWithSteam,
+            completeDiscordLogin,
+            completeSteamLogin,
+            unlinkAccount,
+            loginDemo,
+            logout,
+        ],
     );
 
     return (

@@ -6,7 +6,6 @@ const columns = [
     {
         title: "NAWIGACJA",
         links: [
-            { to: "/platnosci", label: "Płatności" },
             { to: "/regulamin", label: "Regulamin" },
             { to: "/o-nas", label: "O nas" },
         ],

@@ -1,89 +1,3 @@
-export interface Product {
-    id: string;
-    name: string;
-    description: string;
-    price: string;
-    period?: string;
-    features: string[];
-    featured?: boolean;
-}
-
-export const products: Product[] = [
-    {
-        id: "vip-gold",
-        name: "VIP GOLD",
-        description: "Najwyższy status na serwerze. Pełen pakiet przywilejów dla najbardziej zaangażowanych graczy.",
-        price: "99,99 zł",
-        period: "/ 30 dni",
-        features: [
-            "Priorytetowa kolejka #1",
-            "Ekskluzywne pojazdy VIP",
-            "Unikalna rola na Discordzie",
-            "Dostęp do salonu VIP w grze",
-            "Złota odznaka przy nicku",
-        ],
-        featured: true,
-    },
-    {
-        id: "vip-silver",
-        name: "VIP SILVER",
-        description: "Zbalansowany pakiet premium dla graczy, którzy chcą więcej od miasta.",
-        price: "59,99 zł",
-        period: "/ 30 dni",
-        features: [
-            "Priorytetowa kolejka #2",
-            "Pakiet pojazdów Silver",
-            "Rola Silver na Discordzie",
-            "Dodatkowe sloty postaci",
-        ],
-    },
-    {
-        id: "vip-bronze",
-        name: "VIP BRONZE",
-        description: "Wejście w świat premium. Idealny początek przygody z rangami.",
-        price: "29,99 zł",
-        period: "/ 30 dni",
-        features: [
-            "Priorytetowa kolejka #3",
-            "Podstawowy pakiet pojazdów",
-            "Rola Bronze na Discordzie",
-        ],
-    },
-    {
-        id: "whitelist-priority",
-        name: "WHITELIST PRIORITY",
-        description: "Przyspieszone rozpatrzenie podania na whitelistę i priorytet w kolejce rekrutacyjnej.",
-        price: "19,99 zł",
-        features: [
-            "Priorytetowe rozpatrzenie podania",
-            "Wsparcie rekrutera",
-            "Jednorazowy zakup",
-        ],
-    },
-    {
-        id: "flux-coins",
-        name: "FLUX COINS ×5 000",
-        description: "Waluta premium serwera. Wydaj na pojazdy, nieruchomości i personalizację postaci.",
-        price: "49,99 zł",
-        features: [
-            "5 000 Flux Coins",
-            "Natychmiastowa dostawa",
-            "Brak daty ważności",
-        ],
-    },
-    {
-        id: "biznes-start",
-        name: "BIZNES START",
-        description: "Własny lokal od pierwszego dnia. Bar, warsztat lub sklep — zbuduj swoje imperium.",
-        price: "79,99 zł",
-        features: [
-            "Własna nieruchomość firmowa",
-            "Interfejs zarządzania biznesem",
-            "Wsparcie administracji przy starcie",
-        ],
-    },
-];
-
 export interface RuleItem {
     title: string;
     content: string;
@@ -204,24 +118,6 @@ export const ruleCategories: RuleCategory[] = [
             },
         ],
     },
-    {
-        id: "platnosci",
-        title: "Płatności",
-        rules: [
-            {
-                title: "7.1 Realizacja zamówień",
-                content: "Produkty cyfrowe realizowane są automatycznie do 15 minut od zaksięgowania płatności. W razie problemów należy otworzyć ticket.",
-            },
-            {
-                title: "7.2 Zwroty",
-                content: "Zakupione produkty cyfrowe nie podlegają zwrotowi po ich aktywacji na koncie. Chargeback skutkuje trwałą blokadą konta.",
-            },
-            {
-                title: "7.3 Transfer",
-                content: "Rangi i waluta premium są przypisane do konta i nie podlegają przenoszeniu między graczami.",
-            },
-        ],
-    },
 ];
 
 export interface ApplicationType {
@@ -281,15 +177,6 @@ export const stats: Stat[] = [
     { label: "AKTYWNYCH CZŁONKÓW", value: 3800, suffix: "+" },
     { label: "GODZIN ROZGRYWKI", value: 96000, suffix: "+" },
     { label: "EVENTÓW", value: 250, suffix: "+" },
-];
-
-export const marqueeItems = [
-    "NOWA ERA ROLEPLAY",
-    "FLUXGG REBORN",
-    "GTA V FIVEM RP",
-    "PREMIUM SERWER",
-    "TWOJA HISTORIA",
-    "SPOŁECZNOŚĆ",
 ];
 
 export const DISCORD_URL = "https://discord.gg/fluxgg";
