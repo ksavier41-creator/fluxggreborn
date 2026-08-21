@@ -1,0 +1,122 @@
+{
+  "project_name": "FluxGG Reborn",
+  "theme": "dark_monochrome",
+  "design_philosophy": "Awwwards Site-of-the-Day level. Premium SaaS meets Gaming Platform. Strictly monochrome (black, dark-gray, white), generous negative space, deliberate typography, and high-end motion design.",
+  "colors": {
+    "background_primary": "#050505",
+    "background_secondary": "#0A0A0A",
+    "surface": "#0F0F0F",
+    "surface_elevated": "#1A1A1A",
+    "border_light": "rgba(255, 255, 255, 0.1)",
+    "border_subtle": "rgba(255, 255, 255, 0.05)",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A3A3A3",
+    "text_muted": "#737373",
+    "accent_glow": "rgba(255, 255, 255, 0.08)",
+    "rules": [
+      "CRITICAL: No colored accents whatsoever. No blue, no red, no green, no purple.",
+      "Glow effects must use white/grey transparent gradients.",
+      "Always use optical clarity for glassmorphism: heavy blur with extremely low opacity white borders."
+    ]
+  },
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "Inter",
+    "hierarchy": {
+      "h1": "text-6xl md:text-7xl lg:text-[6rem] tracking-tighter leading-[0.9] font-light",
+      "h2": "text-4xl md:text-5xl tracking-tight font-medium",
+      "h3": "text-2xl md:text-3xl tracking-tight font-normal",
+      "body": "text-base md:text-lg text-[#A3A3A3] font-normal leading-relaxed",
+      "overline": "text-xs tracking-[0.2em] uppercase text-[#737373] font-medium"
+    },
+    "rules": [
+      "Never use Inter for headings.",
+      "Use extremely tight tracking (-0.04em) on massive text.",
+      "Avoid bold weights for giant text; rely on font-light or font-normal."
+    ]
+  },
+  "layouts_and_spacing": {
+    "grid": "Mobile-first, 12-column bento-inspired grids on desktop (grid-cols-1 md:grid-cols-12) with gap-6 or gap-8.",
+    "section_padding": "py-24 md:py-32 or py-40 for major sections to ensure premium breathing room.",
+    "container": "max-w-[1600px] mx-auto px-6 md:px-12",
+    "alignment": "Strictly optical. Left-align body copy and features. Center alignment reserved strictly for specific editorial moments."
+  },
+  "motion_and_interaction": {
+    "libraries": ["framer-motion", "lenis"],
+    "smooth_scrolling": "Lenis is MANDATORY. Momentum scrolling makes the site feel heavy and premium.",
+    "hero_reveal": "Masked line-by-line text reveal for H1. Initial y: 100%, duration: 1.2s, ease: [0.16, 1, 0.3, 1], staggerChildren: 0.1s.",
+    "scroll_reveal": "Elements fade in and translate Y up by 40px on scroll (Framer Motion whileInView). Viewport margin: -100px.",
+    "hover_effects": "Subtle 3D tilt on cards (use Framer Motion). Scale down buttons slightly on tap (scale: 0.98).",
+    "custom_cursor": "Small white dot tracking the mouse (mix-blend-mode: difference), expands when hovering interactive elements.",
+    "page_loader": "Minimalistic black screen with a single white line or percentage counter that masks out upwards on load."
+  },
+  "3d_and_effects": {
+    "libraries": ["@react-three/fiber", "@react-three/drei"],
+    "hero_scene": "Dark abstract geometric or organic shapes rotating very slowly in the background. Material must be very dark grey/black with slight specular white highlights.",
+    "glassmorphism": "Used only for sticky nav and modal overlays: bg-black/60 backdrop-blur-xl border-b border-white/5.",
+    "parallax": "Apply subtle Y-axis translate on background imagery and 3D canvas relative to scroll position."
+  },
+  "pages_blueprint": {
+    "Home": {
+      "layout": "Kinetic Hero -> Editorial Marquee -> Numbered Manifesto -> Featured Products/Stats -> Footer",
+      "details": "Hero: 'FLUXGG REBORN\\nNowa era roleplay.' Buttons: GRAJ TERAZ (Solid White), DISCORD (Outline). Marquee: Slow-moving uppercase text separated by simple dots."
+    },
+    "Płatności (Payments)": {
+      "layout": "Grid of premium product cards.",
+      "card_style": "Dark panel, 1px border. On hover, 3D tilt effect with a white inner glow. 'KUP TERAZ' primary button."
+    },
+    "Regulamin (Rules)": {
+      "layout": "Large search input on top -> Custom Accordion lists.",
+      "components": "Shadcn Accordion. Strip away all default Vercel-like styling. Border-bottom only, large clean typography."
+    },
+    "Profil (Profile)": {
+      "layout": "Dashboard-style Bento Grid. Left column: User Info. Right column: Stats & History.",
+      "badges": "Verification badges MUST NOT use green. Use white outlines with a faint white text shadow for 'STEAM ZWERYFIKOWANY'."
+    },
+    "O nas (About Us)": {
+      "layout": "Cinematic text sections and large animated stat counters.",
+      "counters": "GRACZE, AKTYWNYCH CZŁONKÓW, GODZIN ROZGRYWKI, EVENTÓW. Text size: text-[5rem] or larger, tracking-tighter."
+    },
+    "Weryfikacja (Verification)": {
+      "layout": "Two massive connection cards centered vertically.",
+      "states": "Niepołączono (greyed out), Weryfikowanie (subtle white spinner), Zweryfikowano (white text, glow)."
+    },
+    "Podania (Applications)": {
+      "layout": "Masonry or clean grid of Application Types (Whitelist, Administracja, Frakcja, Biznes, Ekipa).",
+      "interaction": "Clicking a card opens a heavily styled Shadcn Dialog (Modal) containing the application form."
+    }
+  },
+  "components": {
+    "Button": "No rounded-full unless for icons. Use rounded-none or rounded-sm. Primary: bg-white text-black hover:bg-[#E5E5E5]. Secondary: bg-transparent border border-[#262626] text-white hover:border-[#737373].",
+    "Navbar": "Sticky top. MUST have background (e.g., bg-[#050505]/80 backdrop-blur-md). Never fully transparent. Links hover effect: opacity change or underline reveal.",
+    "Cards": "bg-[#0A0A0A] border border-[#1A1A1A] p-8 md:p-12. Deep shadows are banned; use 1px borders and subtle inner glows for depth."
+  },
+  "images": [
+    {
+      "url": "https://images.unsplash.com/photo-1697899001862-59699946ea29?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwyfHxkYXJrJTIwYWJzdHJhY3QlMjAzZCUyMHNoYXBlcyUyMGJsYWNrJTIwYW5kJTIwd2hpdGV8ZW58MHx8fHwxNzg3MzIxNDgxfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract black and white 3D object with smooth curves",
+      "category": "Hero Background Fallback / Section Background"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1678366633407-7f49da199a42?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwxfHxkYXJrJTIwYWJzdHJhY3QlMjAzZCUyMHNoYXBlcyUyMGJsYWNrJTIwYW5kJTIwd2hpdGV8ZW58MHx8fHwxNzg3MzIxNDgxfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Curved black ribbons with soft lighting",
+      "category": "Texture Overlay"
+    }
+  ],
+  "accessibility_and_testing": {
+    "data_testid": "CRITICAL: All interactive and key informational elements MUST include a `data-testid` attribute using kebab-case (e.g., `data-testid=\"nav-login-button\"`).",
+    "contrast": "Ensure pure white text (#FFFFFF) is used against the pure black background (#050505) for primary readability. Muted text must not fall below WCAG AA requirements.",
+    "motion": "Wrap massive animations in prefers-reduced-motion media queries."
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You have .js files not .tsx file, so configure routes and components in standard JS.",
+    "No generic centered layouts. Exploit asymmetrical bento grids and hard left alignments.",
+    "The app container must NOT be center-aligned.",
+    "Do not use generic button styling. Adopt sharp, high-end monochrome buttons with micro-interactions.",
+    "Never apply `transition: all`. Use specific transitions: `transition: transform 0.3s ease, opacity 0.3s ease`.",
+    "Use pure HTML/Tailwind for marketing layouts. Use Shadcn exclusively for logic-heavy components (Accordions, Dialogs).",
+    "Integrate Lenis for smooth scrolling in the main layout wrapper.",
+    "Integrate Sonner for toast notifications. Customize the toast to be pure black with a white border.",
+    "NO EMOJIS in the UI. Use Phosphor Icons or Lucide React with extremely thin stroke weights."
+  ]
+}
