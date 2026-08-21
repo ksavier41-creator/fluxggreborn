@@ -55,6 +55,10 @@ Screenshoty e2e: home (hero + scroll), płatności (+toast), regulamin (search f
 ## Zmiany (2026-08-21, iteracja 5)
 - Webhook Discord podłączony: nowe podanie na whitelistę wysyła embed na kanał administracji; inne typy podań nie powiadamiają (na prośbę użytkownika). Zweryfikowane: 204 od Discorda przy whitelist, brak wywołania przy biznes.
 
+## Zmiany (2026-08-21, iteracja 6)
+- Podanie na whitelistę ma własne pytania: imię i nazwisko postaci (IC), wiek (OOC), opis postaci, scenariusz RP (impreza prasowej firmy). Odpowiedzi zapisują się w polu `answers` i wyświetlają w panelu admina. Inne typy podań zachowują ogólne pole motywacji.
+- Webhook Discord: emoji w wiadomościach decyzji — ✅ Zatwierdzono / ❌ Odrzucone podanie na WL: <@id>.
+
 ## Następne kroki
 1. Przetestować pełny flow Steam/Discord w przeglądarce (wymaga kont użytkownika).
 2. FiveM stats po otrzymaniu kodu serwera cfx.re + prawdziwy link fivem://connect.

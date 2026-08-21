@@ -181,3 +181,23 @@ export const stats: Stat[] = [
 
 export const DISCORD_URL = "https://discord.gg/SKQ9Qeps38";
 export const FIVEM_CONNECT_URL = "fivem://connect/play.fluxgg.gg";
+
+export interface WhitelistQuestion {
+    key: string;
+    label: string;
+    textarea: boolean;
+}
+
+export const whitelistQuestions: WhitelistQuestion[] = [
+    { key: "imie_ic", label: "Imię i nazwisko postaci (IC)", textarea: false },
+    { key: "wiek_ooc", label: "Wiek (OOC)", textarea: false },
+    { key: "opis_postaci", label: "Opis postaci", textarea: true },
+    {
+        key: "sytuacja",
+        label: "Jesteś sam wśród swoich największych wrogów — jesteście na imprezie prasowej Twojej własnej firmy. Oni nie wiedzą, że jesteś szefem i cały czas się z Ciebie śmieją oraz poniżają Cię. Jak Twoja postać się zachowa i jakie decyzje podejmie?",
+        textarea: true,
+    },
+];
+
+export const whitelistQuestionLabels: Record<string, string> =
+    Object.fromEntries(whitelistQuestions.map((q) => [q.key, q.label]));

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
-import { applicationTypes } from "@/data/content";
+import { applicationTypes, whitelistQuestionLabels } from "@/data/content";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -16,6 +16,7 @@ interface AdminApplication {
     discord: string;
     steam_id: string;
     motivation: string;
+    answers?: Record<string, string> | null;
     status: string;
     created_at: string;
 }
@@ -368,9 +369,36 @@ export default function Admin() {
                                                         {application.steam_id}
                                                     </p>
                                                 </div>
-                                                <p className="mt-3 text-sm text-[#A3A3A3] leading-relaxed">
-                                                    {application.motivation}
-                                                </p>
+                                                {application.answers ? (
+                                                    <div
+                                                        data-testid={`admin-answers-${application.id}`}
+                                                        className="mt-4 space-y-4 border-t border-white/5 pt-4"
+                                                    >
+                                                        {Object.entries(
+                                                            application.answers,
+                                                        ).map(
+                                                            ([key, value]) => (
+                                                                <div key={key}>
+                                                                    <p className="text-[10px] tracking-[0.2em] text-[#737373] leading-relaxed">
+                                                                        {(
+                                                                            whitelistQuestionLabels[
+                                                                                key
+                                                                            ] ??
+                                                                            key
+                                                                        ).toUpperCase()}
+                                                                    </p>
+                                                                    <p className="mt-1.5 text-sm text-[#A3A3A3] leading-relaxed">
+                                                                        {value}
+                                                                    </p>
+                                                                </div>
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <p className="mt-3 text-sm text-[#A3A3A3] leading-relaxed">
+                                                        {application.motivation}
+                                                    </p>
+                                                )}
                                                 {application.status ===
                                                     "pending" && (
                                                     <div className="mt-5 flex gap-3">

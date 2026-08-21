@@ -88,7 +88,11 @@ class ApplicationCreate(BaseModel):
     nick: str = Field(min_length=2, max_length=60)
     discord: str = Field(min_length=2, max_length=60)
     steam_id: str = Field(min_length=2, max_length=40)
-    motivation: str = Field(min_length=10, max_length=2000)
+    motivation: str = Field(default="", max_length=2000)
+    answers: Optional[dict[str, str]] = None
+
+
+WHITELIST_QUESTION_KEYS = {"imie_ic", "wiek_ooc", "opis_postaci", "sytuacja"}
 
 
 class ApplicationDocument(BaseModel):
@@ -101,7 +105,8 @@ class ApplicationDocument(BaseModel):
     nick: str
     discord: str
     steam_id: str
-    motivation: str
+    motivation: str = ""
+    answers: Optional[dict[str, str]] = None
     status: str = "pending"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -124,6 +129,7 @@ class ApplicationOut(BaseModel):
     discord: str
     steam_id: str
     motivation: str
+    answers: Optional[dict[str, str]] = None
     status: str
     created_at: str
 
@@ -172,6 +178,7 @@ def to_application_out(doc: dict) -> ApplicationOut:
         discord=doc.get("discord", ""),
         steam_id=doc.get("steam_id", ""),
         motivation=doc.get("motivation", ""),
+        answers=doc.get("answers"),
         status=doc.get("status", "pending"),
         created_at=iso(doc.get("created_at")),
     )
@@ -416,9 +423,9 @@ async def notify_decision_webhook(discord_id: str, accepted: bool) -> None:
     if not DISCORD_WEBHOOK_URL:
         return
     message = (
-        f"Zatwierdzono podanie na WL: <@{discord_id}>"
+        f"✅ Zatwierdzono podanie na WL: <@{discord_id}>"
         if accepted
-        else f"Odrzucone podanie na WL: <@{discord_id}>"
+        else f"❌ Odrzucone podanie na WL: <@{discord_id}>"
     )
     try:
         async with httpx.AsyncClient(timeout=8.0) as http:
@@ -440,6 +447,14 @@ async def notify_decision_webhook(discord_id: str, accepted: bool) -> None:
 async def create_application(body: ApplicationCreate, authorization: Optional[str] = Header(default=None)):
     if body.type not in APPLICATION_TYPES:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nieznany typ podania")
+    if body.type == "whitelist":
+        answers = body.answers or {}
+        if not WHITELIST_QUESTION_KEYS.issubset(answers) or any(
+            len(str(answers.get(key, "")).strip()) < 2 for key in WHITELIST_QUESTION_KEYS
+        ):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Uzupełnij wszystkie pytania podania")
+    elif len(body.motivation.strip()) < 10:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Motywacja jest zbyt krótka")
     uid = require_user_id(authorization)
     user_doc = await db.users.find_one({"_id": ObjectId(uid)})
     if not user_doc:

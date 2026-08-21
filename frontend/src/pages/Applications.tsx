@@ -6,10 +6,17 @@ import { useAuth } from "@/auth/AuthContext";
 import { Reveal } from "@/components/Reveal";
 import { TiltCard } from "@/components/TiltCard";
 import { SectionHeading } from "@/components/SectionHeading";
-import { applicationTypes, type ApplicationType } from "@/data/content";
+import {
+    applicationTypes,
+    whitelistQuestions,
+    type ApplicationType,
+} from "@/data/content";
 import { EASE } from "@/lib/motion";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const inputClass =
+    "w-full bg-[#050505] border border-white/10 focus:border-white/40 outline-none text-white placeholder:text-white/25 text-sm py-3 px-4 transition-colors duration-300";
 
 function ApplicationModal({
     application,
@@ -20,15 +27,31 @@ function ApplicationModal({
 }) {
     const { user } = useAuth();
     const [sending, setSending] = useState(false);
+    const isWhitelist = application.id === "whitelist";
 
     const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const form = e.currentTarget;
-        const data = new FormData(form);
+        const data = new FormData(e.currentTarget);
         const token = localStorage.getItem("fluxgg-auth-token");
         if (!token) {
             toast.error("Wymagane zalogowanie");
             return;
+        }
+        const payload: Record<string, unknown> = {
+            type: application.id,
+            nick: String(data.get("nick") ?? ""),
+            discord: String(data.get("discord") ?? ""),
+            steam_id: String(data.get("steam") ?? ""),
+        };
+        if (isWhitelist) {
+            payload.answers = Object.fromEntries(
+                whitelistQuestions.map((q) => [
+                    q.key,
+                    String(data.get(q.key) ?? ""),
+                ]),
+            );
+        } else {
+            payload.motivation = String(data.get("motivation") ?? "");
         }
         setSending(true);
         try {
@@ -38,13 +61,7 @@ function ApplicationModal({
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({
-                    type: application.id,
-                    nick: String(data.get("nick") ?? ""),
-                    discord: String(data.get("discord") ?? ""),
-                    steam_id: String(data.get("steam") ?? ""),
-                    motivation: String(data.get("motivation") ?? ""),
-                }),
+                body: JSON.stringify(payload),
             });
             if (!res.ok) {
                 let detail = "Nie udało się wysłać podania";
@@ -67,9 +84,6 @@ function ApplicationModal({
             setSending(false);
         }
     };
-
-    const inputClass =
-        "w-full bg-[#050505] border border-white/10 focus:border-white/40 outline-none text-white placeholder:text-white/25 text-sm py-3 px-4 transition-colors duration-300";
 
     return (
         <motion.div
@@ -152,20 +166,48 @@ function ApplicationModal({
                             />
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-xs tracking-[0.2em] text-[#737373] mb-2">
-                            DLACZEGO TY?
-                        </label>
-                        <textarea
-                            data-testid="application-field-motivation"
-                            name="motivation"
-                            required
-                            minLength={10}
-                            rows={5}
-                            placeholder="Opowiedz krótko o sobie, swoim doświadczeniu w RP i motywacji…"
-                            className={`${inputClass} resize-none`}
-                        />
-                    </div>
+                    {isWhitelist ? (
+                        whitelistQuestions.map((question) => (
+                            <div key={question.key}>
+                                <label className="block text-xs tracking-[0.2em] text-[#737373] mb-2 leading-relaxed">
+                                    {question.label.toUpperCase()}
+                                </label>
+                                {question.textarea ? (
+                                    <textarea
+                                        data-testid={`application-field-${question.key}`}
+                                        name={question.key}
+                                        required
+                                        minLength={2}
+                                        rows={question.key === "sytuacja" ? 6 : 4}
+                                        className={`${inputClass} resize-none`}
+                                    />
+                                ) : (
+                                    <input
+                                        data-testid={`application-field-${question.key}`}
+                                        name={question.key}
+                                        required
+                                        minLength={2}
+                                        className={inputClass}
+                                    />
+                                )}
+                            </div>
+                        ))
+                    ) : (
+                        <div>
+                            <label className="block text-xs tracking-[0.2em] text-[#737373] mb-2">
+                                DLACZEGO TY?
+                            </label>
+                            <textarea
+                                data-testid="application-field-motivation"
+                                name="motivation"
+                                required
+                                minLength={10}
+                                rows={5}
+                                placeholder="Opowiedz krótko o sobie, swoim doświadczeniu w RP i motywacji…"
+                                className={`${inputClass} resize-none`}
+                            />
+                        </div>
+                    )}
                     <button
                         data-testid={`application-submit-${application.id}`}
                         type="submit"
