@@ -73,6 +73,9 @@ Screenshoty e2e: home (hero + scroll), płatności (+toast), regulamin (search f
 ## Zmiany (2026-08-21, iteracja 10)
 - Usuwanie podań w panelu admina: ikona kosza przy każdym podaniu, potwierdzenie, DELETE /api/admin/applications/{id} (tylko admin, 403 dla zwykłych).
 
+## Zmiany (2026-08-21, iteracja 11)
+- Osobne webhooki decyzji per typ: whitelist / administracja / ekipa / biznes (DISCORD_WEBHOOK_ADMINISTRACJA / _EKIPA / _BIZNES w env). Zweryfikowane: decyzje wysłały pingi ✅/❌ na 3 różne kanały (204).
+
 ## Następne kroki
 1. Przetestować pełny flow Steam/Discord w przeglądarce (wymaga kont użytkownika).
 2. FiveM stats po otrzymaniu kodu serwera cfx.re + prawdziwy link fivem://connect.
