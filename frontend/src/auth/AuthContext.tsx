@@ -58,12 +58,22 @@ function getToken() {
 async function parseError(res: Response): Promise<never> {
     let detail = "Wystąpił błąd";
     try {
-        const data = await res.json();
+        const data = await safeJson(res);
         if (data?.detail) detail = data.detail;
     } catch {
         /* keep default */
     }
     throw new Error(detail);
+}
+
+async function safeJson(res: Response) {
+    try {
+        return await res.json();
+    } catch {
+        throw new Error(
+            "Serwer API zwrócił nieprawidłową odpowiedź. Sprawdź, czy backend działa i czy /api jest przekierowane do niego.",
+        );
+    }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -105,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
                 const res = await fetch(`${API}${path}`);
                 if (!res.ok) await parseError(res);
-                const { url } = await res.json();
+                const { url } = await safeJson(res);
                 window.location.assign(url);
             } catch (e) {
                 toast.error(
@@ -138,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             body: JSON.stringify({ code }),
         });
         if (!res.ok) await parseError(res);
-        const data = await res.json();
+        const data = await safeJson(res);
         localStorage.removeItem(DEMO_KEY);
         localStorage.setItem(TOKEN_KEY, data.access_token);
         setUser(data.user as User);
@@ -157,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify(params),
             });
             if (!res.ok) await parseError(res);
-            const data = await res.json();
+            const data = await safeJson(res);
             localStorage.removeItem(DEMO_KEY);
             localStorage.setItem(TOKEN_KEY, data.access_token);
             setUser(data.user as User);
