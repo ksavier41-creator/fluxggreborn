@@ -36,7 +36,7 @@ STEAM_OPENID_ENDPOINT = "https://steamcommunity.com/openid/login"
 STEAM_ID_RE = re.compile(r"^https://steamcommunity\.com/openid/id/(\d+)$")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_DAYS = 7
-APPLICATION_TYPES = {"whitelist", "administracja", "frakcja", "biznes", "ekipa"}
+APPLICATION_TYPES = {"whitelist", "administracja", "biznes", "ekipa"}
 APPLICATION_STATUSES = {"pending", "accepted", "rejected"}
 
 PyObjectId = Annotated[str, BeforeValidator(str)]

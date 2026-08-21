@@ -144,13 +144,6 @@ export const applicationTypes: ApplicationType[] = [
         note: "Nabór wkrótce",
     },
     {
-        id: "frakcja",
-        name: "Podanie na frakcję",
-        description: "LSPD, EMS, mechanicy — złóż podanie do legalnej frakcji i rozwijaj karierę swojej postaci.",
-        status: "open",
-        note: "Wolne sloty",
-    },
-    {
         id: "biznes",
         name: "Podanie na biznes",
         description: "Masz pomysł na własny lokal? Opisz koncepcję i dołącz do gospodarki miasta.",
