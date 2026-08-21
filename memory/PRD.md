@@ -59,6 +59,10 @@ Screenshoty e2e: home (hero + scroll), płatności (+toast), regulamin (search f
 - Podanie na whitelistę ma własne pytania: imię i nazwisko postaci (IC), wiek (OOC), opis postaci, scenariusz RP (impreza prasowej firmy). Odpowiedzi zapisują się w polu `answers` i wyświetlają w panelu admina. Inne typy podań zachowują ogólne pole motywacji.
 - Webhook Discord: emoji w wiadomościach decyzji — ✅ Zatwierdzono / ❌ Odrzucone podanie na WL: <@id>.
 
+## Zmiany (2026-08-21, iteracja 7)
+- Panel admina: karta "NABORY PODAŃ" — włączanie/wyłączanie naboru per typ (toggle, zapis w Mongo `application_settings`, backend blokuje zgłoszenia zamkniętego typu, strona /podania czyta statusy na żywo), filtry kategorii nad listą podań.
+- Fix UX: okno podania ma data-lenis-prevent + overscroll-contain — scroll działa wewnątrz modala, tło się nie przesuwa.
+
 ## Następne kroki
 1. Przetestować pełny flow Steam/Discord w przeglądarce (wymaga kont użytkownika).
 2. FiveM stats po otrzymaniu kodu serwera cfx.re + prawdziwy link fivem://connect.

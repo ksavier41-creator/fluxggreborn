@@ -447,6 +447,10 @@ async def notify_decision_webhook(discord_id: str, accepted: bool) -> None:
 async def create_application(body: ApplicationCreate, authorization: Optional[str] = Header(default=None)):
     if body.type not in APPLICATION_TYPES:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nieznany typ podania")
+    stored_setting = await db.application_settings.find_one({"type": body.type})
+    effective_status = stored_setting["status"] if stored_setting else APPLICATION_TYPE_DEFAULTS.get(body.type, "soon")
+    if effective_status != "open":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nabór na ten typ podania jest zamknięty")
     if body.type == "whitelist":
         answers = body.answers or {}
         if not WHITELIST_QUESTION_KEYS.issubset(answers) or any(
@@ -481,6 +485,26 @@ async def admin_applications(authorization: Optional[str] = Header(default=None)
     await require_admin_user(authorization)
     docs = await db.applications.find().sort("created_at", -1).to_list(500)
     return [to_application_out(doc) for doc in docs]
+
+
+class ApplicationStatusSetting(BaseModel):
+    type: str
+    status: str
+
+
+@api_router.patch("/admin/applications/status")
+async def admin_set_application_status(body: ApplicationStatusSetting, authorization: Optional[str] = Header(default=None)):
+    await require_admin_user(authorization)
+    if body.type not in APPLICATION_TYPE_DEFAULTS:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nieznany typ podania")
+    if body.status not in {"open", "soon"}:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nieprawidłowy status naboru")
+    await db.application_settings.update_one(
+        {"type": body.type},
+        {"$set": {"type": body.type, "status": body.status}},
+        upsert=True,
+    )
+    return {"type": body.type, "status": body.status}
 
 
 @api_router.patch("/admin/applications/{application_id}", response_model=ApplicationOut)
@@ -540,6 +564,26 @@ async def admin_bootstrap(body: AdminIn, x_admin_key: Optional[str] = Header(def
         upsert=True,
     )
     return {"ok": True, "discord_id": body.discord_id}
+
+
+APPLICATION_TYPE_DEFAULTS = {
+    "whitelist": "open",
+    "administracja": "soon",
+    "biznes": "open",
+    "ekipa": "soon",
+}
+
+
+@api_router.get("/applications/status")
+async def application_statuses():
+    stored = {
+        doc["type"]: doc["status"]
+        for doc in await db.application_settings.find().to_list(50)
+    }
+    return {
+        t: stored.get(t, default)
+        for t, default in APPLICATION_TYPE_DEFAULTS.items()
+    }
 
 
 app.include_router(api_router)

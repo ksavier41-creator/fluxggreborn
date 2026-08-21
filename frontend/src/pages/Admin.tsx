@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, Loader2, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { Check, Loader2, Plus, ShieldCheck, ToggleLeft, ToggleRight, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
 import { Reveal } from "@/components/Reveal";
@@ -63,8 +63,11 @@ export default function Admin() {
     const { user, isAuthenticated, loading } = useAuth();
     const [applications, setApplications] = useState<AdminApplication[]>([]);
     const [admins, setAdmins] = useState<AdminEntry[]>([]);
+    const [typeStatuses, setTypeStatuses] = useState<Record<string, string>>({});
+    const [filter, setFilter] = useState("all");
     const [dataLoading, setDataLoading] = useState(true);
     const [busyId, setBusyId] = useState<string | null>(null);
+    const [busyType, setBusyType] = useState<string | null>(null);
     const [newAdminId, setNewAdminId] = useState("");
     const [bootId, setBootId] = useState("");
     const [bootKey, setBootKey] = useState("");
@@ -78,12 +81,14 @@ export default function Admin() {
         if (!user?.is_admin) return;
         setDataLoading(true);
         try {
-            const [appsRes, adminsRes] = await Promise.all([
+            const [appsRes, adminsRes, statusRes] = await Promise.all([
                 fetch(`${API}/admin/applications`, { headers: authHeaders() }),
                 fetch(`${API}/admin/admins`, { headers: authHeaders() }),
+                fetch(`${API}/applications/status`),
             ]);
             if (appsRes.ok) setApplications(await appsRes.json());
             if (adminsRes.ok) setAdmins(await adminsRes.json());
+            if (statusRes.ok) setTypeStatuses(await statusRes.json());
         } catch {
             toast.error("Nie udało się pobrać danych");
         } finally {
@@ -120,6 +125,32 @@ export default function Admin() {
             toast.error(e instanceof Error ? e.message : "Błąd");
         } finally {
             setBusyId(null);
+        }
+    };
+
+    const toggleType = async (typeId: string, current: string) => {
+        const next = current === "open" ? "soon" : "open";
+        setBusyType(typeId);
+        try {
+            const res = await fetch(`${API}/admin/applications/status`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...authHeaders(),
+                },
+                body: JSON.stringify({ type: typeId, status: next }),
+            });
+            if (!res.ok) throw new Error("Błąd zmiany statusu naboru");
+            setTypeStatuses((prev) => ({ ...prev, [typeId]: next }));
+            toast.success(
+                next === "open"
+                    ? "Nabór otwarty"
+                    : "Nabór zamknięty",
+            );
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Błąd");
+        } finally {
+            setBusyType(null);
         }
     };
 
@@ -285,9 +316,15 @@ export default function Admin() {
         );
     }
 
+    const typeStatus = (id: string, fallback: string) =>
+        typeStatuses[id] ?? fallback;
     const pendingCount = applications.filter(
         (a) => a.status === "pending",
     ).length;
+    const filtered =
+        filter === "all"
+            ? applications
+            : applications.filter((a) => a.type === filter);
 
     return (
         <div
@@ -304,20 +341,51 @@ export default function Admin() {
                 <div className="lg:col-span-8 space-y-6">
                     <Reveal>
                         <div className="border border-white/10 bg-[#0A0A0A] p-8 md:p-10">
-                            <p className="text-xs tracking-[0.25em] text-[#737373] mb-8">
+                            <p className="text-xs tracking-[0.25em] text-[#737373] mb-6">
                                 PODANIA GRACZY
                             </p>
+                            <div className="flex flex-wrap gap-2 mb-8">
+                                <button
+                                    data-testid="admin-filter-all"
+                                    onClick={() => setFilter("all")}
+                                    className={`text-[10px] tracking-[0.2em] border px-3.5 py-2 transition-colors duration-200 ${
+                                        filter === "all"
+                                            ? "bg-white text-black border-white"
+                                            : "border-white/15 text-white/60 hover:text-white hover:border-white/40"
+                                    }`}
+                                >
+                                    WSZYSTKIE
+                                </button>
+                                {applicationTypes.map((type) => (
+                                    <button
+                                        key={type.id}
+                                        data-testid={`admin-filter-${type.id}`}
+                                        onClick={() => setFilter(type.id)}
+                                        className={`text-[10px] tracking-[0.2em] border px-3.5 py-2 transition-colors duration-200 ${
+                                            filter === type.id
+                                                ? "bg-white text-black border-white"
+                                                : "border-white/15 text-white/60 hover:text-white hover:border-white/40"
+                                        }`}
+                                    >
+                                        {type.name
+                                            .replace("Podanie na ", "")
+                                            .replace("Podanie do ", "")
+                                            .replace("Podanie ", "")
+                                            .toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
                             {dataLoading ? (
                                 <p className="text-sm text-[#737373]">
                                     Ładowanie…
                                 </p>
-                            ) : applications.length === 0 ? (
+                            ) : filtered.length === 0 ? (
                                 <p className="text-sm text-[#737373]">
-                                    Brak podań.
+                                    Brak podań w tej kategorii.
                                 </p>
                             ) : (
                                 <div className="divide-y divide-white/5">
-                                    {applications.map((application) => {
+                                    {filtered.map((application) => {
                                         const type = applicationTypes.find(
                                             (t) => t.id === application.type,
                                         );
@@ -457,8 +525,74 @@ export default function Admin() {
                     </Reveal>
                 </div>
 
-                <div className="lg:col-span-4">
+                <div className="lg:col-span-4 space-y-6">
                     <Reveal delay={0.1}>
+                        <div
+                            data-testid="admin-types-card"
+                            className="border border-white/10 bg-[#0A0A0A] p-8 md:p-10"
+                        >
+                            <p className="text-xs tracking-[0.25em] text-[#737373] mb-8">
+                                NABORY PODAŃ
+                            </p>
+                            <div className="divide-y divide-white/5">
+                                {applicationTypes.map((type) => {
+                                    const status = typeStatus(
+                                        type.id,
+                                        type.status,
+                                    );
+                                    const isOpen = status === "open";
+                                    return (
+                                        <div
+                                            key={type.id}
+                                            data-testid={`admin-type-${type.id}`}
+                                            className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
+                                        >
+                                            <div>
+                                                <p className="text-sm text-white">
+                                                    {type.name}
+                                                </p>
+                                                <p className="text-[10px] tracking-[0.2em] text-[#737373] mt-1">
+                                                    {isOpen
+                                                        ? "OTWARTE"
+                                                        : "ZAMKNIĘTE"}
+                                                </p>
+                                            </div>
+                                            <button
+                                                data-testid={`admin-toggle-${type.id}`}
+                                                onClick={() =>
+                                                    void toggleType(
+                                                        type.id,
+                                                        status,
+                                                    )
+                                                }
+                                                disabled={busyType === type.id}
+                                                aria-label="Przełącz nabór"
+                                                className={`transition-colors duration-300 disabled:opacity-40 ${
+                                                    isOpen
+                                                        ? "text-white"
+                                                        : "text-white/30 hover:text-white/70"
+                                                }`}
+                                            >
+                                                {isOpen ? (
+                                                    <ToggleRight
+                                                        size={30}
+                                                        strokeWidth={1.2}
+                                                    />
+                                                ) : (
+                                                    <ToggleLeft
+                                                        size={30}
+                                                        strokeWidth={1.2}
+                                                    />
+                                                )}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </Reveal>
+
+                    <Reveal delay={0.18}>
                         <div
                             data-testid="admin-admins-card"
                             className="border border-white/10 bg-[#0A0A0A] p-8 md:p-10"

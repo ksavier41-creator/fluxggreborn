@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -101,7 +101,8 @@ function ApplicationModal({
                 data-testid={`application-modal-${application.id}`}
                 role="dialog"
                 aria-modal="true"
-                className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 p-8 md:p-10"
+                data-lenis-prevent
+                className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto overscroll-contain bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 p-8 md:p-10"
                 initial={{ opacity: 0, y: 32, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 24, scale: 0.98 }}
@@ -234,10 +235,21 @@ function ApplicationModal({
 
 export default function Applications() {
     const [selected, setSelected] = useState<ApplicationType | null>(null);
+    const [statuses, setStatuses] = useState<Record<string, string>>({});
     const { isAuthenticated, user } = useAuth();
 
+    useEffect(() => {
+        fetch(`${API}/applications/status`)
+            .then((res) => (res.ok ? res.json() : {}))
+            .then(setStatuses)
+            .catch(() => {});
+    }, []);
+
+    const statusOf = (application: ApplicationType) =>
+        statuses[application.id] ?? application.status;
+
     const openApplication = (application: ApplicationType) => {
-        if (application.status !== "open") return;
+        if (statusOf(application) !== "open") return;
         if (!isAuthenticated) {
             toast.error("Zaloguj się, aby złożyć podanie", {
                 description: "Użyj przycisku ZALOGUJ SIĘ w nawigacji.",
@@ -264,52 +276,55 @@ export default function Applications() {
                 description="Wybierz typ podania i dołącz do miasta. Każde zgłoszenie trafia bezpośrednio do administracji — decyzję otrzymasz na Discordzie."
             />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {applicationTypes.map((application, i) => (
-                    <Reveal key={application.id} delay={(i % 3) * 0.08}>
-                        <TiltCard
-                            testId={`application-card-${application.id}`}
-                            className="p-8 md:p-10 flex flex-col"
-                        >
-                            <div className="flex items-center justify-between gap-4">
-                                <span
-                                    data-testid={`application-status-${application.id}`}
-                                    className={`text-[10px] tracking-[0.25em] border px-2.5 py-1 ${
-                                        application.status === "open"
-                                            ? "border-white/30 text-white"
-                                            : "border-white/10 text-white/35"
+                {applicationTypes.map((application, i) => {
+                    const status = statusOf(application);
+                    return (
+                        <Reveal key={application.id} delay={(i % 3) * 0.08}>
+                            <TiltCard
+                                testId={`application-card-${application.id}`}
+                                className="p-8 md:p-10 flex flex-col"
+                            >
+                                <div className="flex items-center justify-between gap-4">
+                                    <span
+                                        data-testid={`application-status-${application.id}`}
+                                        className={`text-[10px] tracking-[0.25em] border px-2.5 py-1 ${
+                                            status === "open"
+                                                ? "border-white/30 text-white"
+                                                : "border-white/10 text-white/35"
+                                        }`}
+                                    >
+                                        {status === "open"
+                                            ? "OTWARTE"
+                                            : "WKRÓTCE"}
+                                    </span>
+                                    <span className="text-[10px] tracking-[0.2em] text-[#737373]">
+                                        {application.note.toUpperCase()}
+                                    </span>
+                                </div>
+                                <h3 className="mt-8 font-display text-2xl tracking-tight text-white">
+                                    {application.name}
+                                </h3>
+                                <p className="mt-3 text-sm text-[#A3A3A3] leading-relaxed flex-1">
+                                    {application.description}
+                                </p>
+                                <button
+                                    data-testid={`application-open-${application.id}`}
+                                    onClick={() => openApplication(application)}
+                                    disabled={status !== "open"}
+                                    className={`mt-10 w-full py-3.5 text-sm tracking-[0.2em] transition-[background-color,border-color,color,transform] duration-200 active:scale-[0.98] ${
+                                        status === "open"
+                                            ? "bg-white text-black font-medium hover:bg-[#E5E5E5]"
+                                            : "border border-white/10 text-white/30 cursor-not-allowed"
                                     }`}
                                 >
-                                    {application.status === "open"
-                                        ? "OTWARTE"
-                                        : "WKRÓTCE"}
-                                </span>
-                                <span className="text-[10px] tracking-[0.2em] text-[#737373]">
-                                    {application.note.toUpperCase()}
-                                </span>
-                            </div>
-                            <h3 className="mt-8 font-display text-2xl tracking-tight text-white">
-                                {application.name}
-                            </h3>
-                            <p className="mt-3 text-sm text-[#A3A3A3] leading-relaxed flex-1">
-                                {application.description}
-                            </p>
-                            <button
-                                data-testid={`application-open-${application.id}`}
-                                onClick={() => openApplication(application)}
-                                disabled={application.status !== "open"}
-                                className={`mt-10 w-full py-3.5 text-sm tracking-[0.2em] transition-[background-color,border-color,color,transform] duration-200 active:scale-[0.98] ${
-                                    application.status === "open"
-                                        ? "bg-white text-black font-medium hover:bg-[#E5E5E5]"
-                                        : "border border-white/10 text-white/30 cursor-not-allowed"
-                                }`}
-                            >
-                                {application.status === "open"
-                                    ? "ZŁÓŻ PODANIE"
-                                    : "NABÓR ZAMKNIĘTY"}
-                            </button>
-                        </TiltCard>
-                    </Reveal>
-                ))}
+                                    {status === "open"
+                                        ? "ZŁÓŻ PODANIE"
+                                        : "NABÓR ZAMKNIĘTY"}
+                                </button>
+                            </TiltCard>
+                        </Reveal>
+                    );
+                })}
             </div>
             <AnimatePresence>
                 {selected && (
