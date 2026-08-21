@@ -542,6 +542,16 @@ async def admin_update_application(application_id: str, body: ApplicationStatusI
     return to_application_out(doc)
 
 
+@api_router.delete("/admin/applications/{application_id}", status_code=204)
+async def admin_delete_application(application_id: str, authorization: Optional[str] = Header(default=None)):
+    await require_admin_user(authorization)
+    if not ObjectId.is_valid(application_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nie znaleziono podania")
+    result = await db.applications.delete_one({"_id": ObjectId(application_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nie znaleziono podania")
+
+
 @api_router.get("/admin/admins", response_model=list[AdminOut])
 async def admin_list_admins(authorization: Optional[str] = Header(default=None)):
     await require_admin_user(authorization)

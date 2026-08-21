@@ -128,6 +128,24 @@ export default function Admin() {
         }
     };
 
+    const deleteApplication = async (id: string) => {
+        if (!window.confirm("Na pewno usunąć to podanie? Tej operacji nie można cofnąć.")) return;
+        setBusyId(id);
+        try {
+            const res = await fetch(`${API}/admin/applications/${id}`, {
+                method: "DELETE",
+                headers: authHeaders(),
+            });
+            if (!res.ok) throw new Error("Nie udało się usunąć podania");
+            setApplications((prev) => prev.filter((a) => a.id !== id));
+            toast.success("Podanie usunięte");
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Błąd");
+        } finally {
+            setBusyId(null);
+        }
+    };
+
     const toggleType = async (typeId: string, current: string) => {
         const next = current === "open" ? "soon" : "open";
         setBusyType(typeId);
@@ -416,6 +434,25 @@ export default function Admin() {
                                                             application.status
                                                         }
                                                     />
+                                                    <button
+                                                        data-testid={`admin-delete-${application.id}`}
+                                                        onClick={() =>
+                                                            void deleteApplication(
+                                                                application.id,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            busyId ===
+                                                            application.id
+                                                        }
+                                                        aria-label="Usuń podanie"
+                                                        className="text-white/30 hover:text-white transition-colors duration-200 p-1.5 disabled:opacity-40"
+                                                    >
+                                                        <Trash2
+                                                            size={15}
+                                                            strokeWidth={1.5}
+                                                        />
+                                                    </button>
                                                 </div>
                                                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                                                     <p className="text-[#A3A3A3]">
