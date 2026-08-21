@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, X } from "lucide-react";
+import { Loader2, Lock, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
 import { Reveal } from "@/components/Reveal";
@@ -17,6 +17,9 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const inputClass =
     "w-full bg-[#050505] border border-white/10 focus:border-white/40 outline-none text-white placeholder:text-white/25 text-sm py-3 px-4 transition-colors duration-300";
+
+const lockedClass =
+    "w-full bg-[#0D0D0D] border border-white/5 text-white/50 text-sm py-3 px-4 font-mono cursor-not-allowed select-all";
 
 function ApplicationModal({
     application,
@@ -40,8 +43,8 @@ function ApplicationModal({
         const payload = {
             type: application.id,
             nick: String(data.get("nick") ?? ""),
-            discord: String(data.get("discord") ?? ""),
-            steam_id: String(data.get("steam") ?? ""),
+            discord: user?.discord_id ?? "",
+            steam_id: user?.steam_id ?? "",
             answers: Object.fromEntries(
                 questions.map((q) => [q.key, String(data.get(q.key) ?? "")]),
             ),
@@ -132,34 +135,36 @@ function ApplicationModal({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
-                            <label className="block text-xs tracking-[0.2em] text-[#737373] mb-2">
+                            <label className="flex items-center gap-2 text-xs tracking-[0.2em] text-[#737373] mb-2">
+                                <Lock size={11} strokeWidth={1.5} />
                                 DISCORD ID
                             </label>
                             <input
                                 data-testid="application-field-discord"
                                 name="discord"
-                                required
-                                minLength={2}
-                                defaultValue={user?.discord_id ?? ""}
-                                placeholder="np. 482910384756102234"
-                                className={inputClass}
+                                readOnly
+                                value={user?.discord_id ?? ""}
+                                className={lockedClass}
                             />
                         </div>
                         <div>
-                            <label className="block text-xs tracking-[0.2em] text-[#737373] mb-2">
+                            <label className="flex items-center gap-2 text-xs tracking-[0.2em] text-[#737373] mb-2">
+                                <Lock size={11} strokeWidth={1.5} />
                                 STEAM ID
                             </label>
                             <input
                                 data-testid="application-field-steam"
                                 name="steam"
-                                required
-                                minLength={2}
-                                defaultValue={user?.steam_id ?? ""}
-                                placeholder="7656119…"
-                                className={inputClass}
+                                readOnly
+                                value={user?.steam_id ?? ""}
+                                className={lockedClass}
                             />
                         </div>
                     </div>
+                    <p className="text-[11px] text-[#737373] leading-relaxed -mt-2">
+                        Identyfikatory pobierane z Twojego konta — nie można
+                        ich zmienić.
+                    </p>
                     {questions.map((question) => (
                         <div key={question.key}>
                             <label
@@ -178,7 +183,7 @@ function ApplicationModal({
                                     data-testid={`application-field-${question.key}`}
                                     name={question.key}
                                     required
-                                    minLength={2}
+                                    minLength={1}
                                     rows={4}
                                     className={`${inputClass} resize-none`}
                                 />
@@ -187,7 +192,7 @@ function ApplicationModal({
                                     data-testid={`application-field-${question.key}`}
                                     name={question.key}
                                     required
-                                    minLength={2}
+                                    minLength={1}
                                     className={inputClass}
                                 />
                             )}
@@ -246,6 +251,19 @@ export default function Applications() {
             });
             return;
         }
+        if (!user?.discord_id || !user?.steam_id) {
+            toast.error("Połącz konto Discord i Steam", {
+                description:
+                    "Oba konta muszą być zweryfikowane przed złożeniem podania.",
+                action: {
+                    label: "Weryfikacja",
+                    onClick: () => {
+                        window.location.href = "/weryfikacja";
+                    },
+                },
+            });
+            return;
+        }
         setSelected(application);
     };
 
@@ -257,7 +275,7 @@ export default function Applications() {
             <SectionHeading
                 overline="Dołącz do nas"
                 title="Podania"
-                description="Wybierz typ podania i dołącz do miasta. Każde zgłoszenie trafia bezpośrednio do administracji — decyzję otrzymasz na Discordzie."
+                description="Wybierz typ podania i dołącz do miasta. Wymagane połączone konto Discord i Steam. Każde zgłoszenie trafia bezpośrednio do administracji — decyzję otrzymasz na Discordzie."
             />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {applicationTypes.map((application, i) => {

@@ -66,6 +66,10 @@ Screenshoty e2e: home (hero + scroll), płatności (+toast), regulamin (search f
 ## Zmiany (2026-08-21, iteracja 8)
 - Indywidualne zestawy pytań dla każdego typu podania (whitelist 7 pytań RP, ekipa 6, biznes 5, administracja 5) — definicje w content.ts (applicationQuestions), walidacja per typ na backendzie (QUESTION_KEYS), odpowiedzi w panelu admina z etykietami (questionLabels). Walidacja: min. 1 znak na odpowiedź (liczby jednocyfrowe OK).
 
+## Zmiany (2026-08-21, iteracja 9)
+- Podania wymagają połączonych OBU kont (Discord + Steam) — backend 403 przy braku któregoś, frontend pokazuje toast z przyciskiem do Weryfikacji.
+- Pola Discord ID / Steam ID w formularzu zablokowane (readonly, ikona kłódki); backend i tak nadpisuje je wartościami z konta (anty-spoofing).
+
 ## Następne kroki
 1. Przetestować pełny flow Steam/Discord w przeglądarce (wymaga kont użytkownika).
 2. FiveM stats po otrzymaniu kodu serwera cfx.re + prawdziwy link fivem://connect.

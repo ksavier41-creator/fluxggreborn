@@ -468,10 +468,20 @@ async def create_application(body: ApplicationCreate, authorization: Optional[st
     user_doc = await db.users.find_one({"_id": ObjectId(uid)})
     if not user_doc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Nie znaleziono użytkownika")
+    if not user_doc.get("discord_id") or not user_doc.get("steam_id"):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Aby złożyć podanie, połącz konto Discord i Steam w zakładce Weryfikacja",
+        )
     doc = ApplicationDocument(
         user_id=uid,
         username=user_doc.get("username", "Gracz"),
-        **body.model_dump(),
+        type=body.type,
+        nick=body.nick,
+        discord=user_doc["discord_id"],
+        steam_id=user_doc["steam_id"],
+        motivation=body.motivation,
+        answers=body.answers,
     )
     result = await db.applications.insert_one(doc.to_mongo())
     created = await db.applications.find_one({"_id": result.inserted_id})
