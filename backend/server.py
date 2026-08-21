@@ -412,30 +412,24 @@ async def unlink_provider(provider: str, authorization: Optional[str] = Header(d
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
 
-async def notify_application_webhook(doc: ApplicationDocument) -> None:
+async def notify_decision_webhook(discord_id: str, accepted: bool) -> None:
     if not DISCORD_WEBHOOK_URL:
         return
-    payload = {
-        "username": "FluxGG Reborn — Podania",
-        "embeds": [
-            {
-                "title": "Nowe podanie na whitelistę",
-                "color": 16777215,
-                "fields": [
-                    {"name": "Konto", "value": doc.username, "inline": True},
-                    {"name": "Nick w grze", "value": doc.nick, "inline": True},
-                    {"name": "Discord ID", "value": doc.discord, "inline": True},
-                    {"name": "Steam ID", "value": doc.steam_id, "inline": True},
-                    {"name": "Motywacja", "value": doc.motivation[:1000], "inline": False},
-                ],
-                "footer": {"text": "Panel administracji: /admin"},
-                "timestamp": doc.created_at.isoformat(),
-            }
-        ],
-    }
+    message = (
+        f"Zatwierdzono podanie na WL: <@{discord_id}>"
+        if accepted
+        else f"Odrzucone podanie na WL: <@{discord_id}>"
+    )
     try:
         async with httpx.AsyncClient(timeout=8.0) as http:
-            response = await http.post(DISCORD_WEBHOOK_URL, json=payload)
+            response = await http.post(
+                DISCORD_WEBHOOK_URL,
+                json={
+                    "username": "FluxGG Reborn",
+                    "content": message,
+                    "allowed_mentions": {"users": [discord_id]},
+                },
+            )
             if response.status_code not in (200, 204):
                 logger.warning("Discord webhook returned %s", response.status_code)
     except httpx.HTTPError:
@@ -457,8 +451,6 @@ async def create_application(body: ApplicationCreate, authorization: Optional[st
     )
     result = await db.applications.insert_one(doc.to_mongo())
     created = await db.applications.find_one({"_id": result.inserted_id})
-    if body.type == "whitelist":
-        await notify_application_webhook(doc)
     return to_application_out(created)
 
 
@@ -483,13 +475,16 @@ async def admin_update_application(application_id: str, body: ApplicationStatusI
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nieprawidłowy status")
     if not ObjectId.is_valid(application_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Nie znaleziono podania")
-    result = await db.applications.update_one(
+    existing = await db.applications.find_one({"_id": ObjectId(application_id)})
+    if not existing:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nie znaleziono podania")
+    await db.applications.update_one(
         {"_id": ObjectId(application_id)},
         {"$set": {"status": body.status}},
     )
-    if result.matched_count == 0:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nie znaleziono podania")
     doc = await db.applications.find_one({"_id": ObjectId(application_id)})
+    if doc and doc.get("type") == "whitelist" and body.status in {"accepted", "rejected"}:
+        await notify_decision_webhook(doc.get("discord", ""), body.status == "accepted")
     return to_application_out(doc)
 
 
