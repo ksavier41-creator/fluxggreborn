@@ -33,7 +33,7 @@ Nowoczesna, minimalistyczna, premium strona dla serwera FiveM RP "FluxGG Reborn"
 Screenshoty e2e: home (hero + scroll), płatności (+toast), regulamin (search filtruje), login demo → profil, weryfikacja (pending→verified), podania (modal), mobile (burger + menu). Wszystkie przeszły.
 
 ## Backlog
-- P0: Discord OAuth — uzupełnić DISCORD_CLIENT_ID/SECRET (redirect: /auth/discord/callback); statystyki na żywo z FiveM (użytkownik: "potem podepniemy").
+- P0: Statystyki na żywo z FiveM (użytkownik: "potem podepniemy").
 - P1: Zapis podań do bazy, panel admina do podań, edycja regulaminu z poziomu admina.
 - P2: Blog/aktualności, changelog, i18n (PL/EN).
 
