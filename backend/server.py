@@ -409,6 +409,39 @@ async def unlink_provider(provider: str, authorization: Optional[str] = Header(d
     return await with_admin_flag(doc)
 
 
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+
+
+async def notify_application_webhook(doc: ApplicationDocument) -> None:
+    if not DISCORD_WEBHOOK_URL:
+        return
+    payload = {
+        "username": "FluxGG Reborn — Podania",
+        "embeds": [
+            {
+                "title": "Nowe podanie na whitelistę",
+                "color": 16777215,
+                "fields": [
+                    {"name": "Konto", "value": doc.username, "inline": True},
+                    {"name": "Nick w grze", "value": doc.nick, "inline": True},
+                    {"name": "Discord ID", "value": doc.discord, "inline": True},
+                    {"name": "Steam ID", "value": doc.steam_id, "inline": True},
+                    {"name": "Motywacja", "value": doc.motivation[:1000], "inline": False},
+                ],
+                "footer": {"text": "Panel administracji: /admin"},
+                "timestamp": doc.created_at.isoformat(),
+            }
+        ],
+    }
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as http:
+            response = await http.post(DISCORD_WEBHOOK_URL, json=payload)
+            if response.status_code not in (200, 204):
+                logger.warning("Discord webhook returned %s", response.status_code)
+    except httpx.HTTPError:
+        logger.warning("Discord webhook notification failed")
+
+
 @api_router.post("/applications", response_model=ApplicationOut, status_code=201)
 async def create_application(body: ApplicationCreate, authorization: Optional[str] = Header(default=None)):
     if body.type not in APPLICATION_TYPES:
@@ -424,6 +457,8 @@ async def create_application(body: ApplicationCreate, authorization: Optional[st
     )
     result = await db.applications.insert_one(doc.to_mongo())
     created = await db.applications.find_one({"_id": result.inserted_id})
+    if body.type == "whitelist":
+        await notify_application_webhook(doc)
     return to_application_out(created)
 
 

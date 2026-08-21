@@ -52,6 +52,9 @@ Screenshoty e2e: home (hero + scroll), płatności (+toast), regulamin (search f
 - Panel admina /admin: lista podań z PRZYJMIJ/ODRZUĆ (PATCH statusu), zarządzanie administratorami po Discord ID (dodaj/usuń), bootstrap pierwszego admina kluczem, link ADMIN w navbarze dla adminów, is_admin w profilu użytkownika.
 - Admin = zalogowany użytkownik z Discord ID w kolekcji admins (seed przez ADMIN_DISCORD_IDS lub bootstrap kluczem).
 
+## Zmiany (2026-08-21, iteracja 5)
+- Webhook Discord podłączony: nowe podanie na whitelistę wysyła embed na kanał administracji; inne typy podań nie powiadamiają (na prośbę użytkownika). Zweryfikowane: 204 od Discorda przy whitelist, brak wywołania przy biznes.
+
 ## Następne kroki
 1. Przetestować pełny flow Steam/Discord w przeglądarce (wymaga kont użytkownika).
 2. FiveM stats po otrzymaniu kodu serwera cfx.re + prawdziwy link fivem://connect.
