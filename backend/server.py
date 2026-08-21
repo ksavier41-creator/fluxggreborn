@@ -424,20 +424,35 @@ async def unlink_provider(provider: str, authorization: Optional[str] = Header(d
 
 
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+DISCORD_WEBHOOKS = {
+    "whitelist": DISCORD_WEBHOOK_URL,
+    "administracja": os.environ.get("DISCORD_WEBHOOK_ADMINISTRACJA", ""),
+    "ekipa": os.environ.get("DISCORD_WEBHOOK_EKIPA", ""),
+    "biznes": os.environ.get("DISCORD_WEBHOOK_BIZNES", ""),
+}
+
+APPLICATION_TYPE_LABELS = {
+    "whitelist": "WL",
+    "administracja": "do administracji",
+    "ekipa": "na ekipę",
+    "biznes": "na biznes",
+}
 
 
-async def notify_decision_webhook(discord_id: str, accepted: bool) -> None:
-    if not DISCORD_WEBHOOK_URL:
+async def notify_decision_webhook(app_type: str, discord_id: str, accepted: bool) -> None:
+    webhook_url = DISCORD_WEBHOOKS.get(app_type, "")
+    if not webhook_url:
         return
+    label = APPLICATION_TYPE_LABELS.get(app_type, app_type)
     message = (
-        f"✅ Zatwierdzono podanie na WL: <@{discord_id}>"
+        f"✅ Zatwierdzono podanie {label}: <@{discord_id}>"
         if accepted
-        else f"❌ Odrzucone podanie na WL: <@{discord_id}>"
+        else f"❌ Odrzucone podanie {label}: <@{discord_id}>"
     )
     try:
         async with httpx.AsyncClient(timeout=8.0) as http:
             response = await http.post(
-                DISCORD_WEBHOOK_URL,
+                webhook_url,
                 json={
                     "username": "FluxGG Reborn",
                     "content": message,
@@ -537,8 +552,8 @@ async def admin_update_application(application_id: str, body: ApplicationStatusI
         {"$set": {"status": body.status}},
     )
     doc = await db.applications.find_one({"_id": ObjectId(application_id)})
-    if doc and doc.get("type") == "whitelist" and body.status in {"accepted", "rejected"}:
-        await notify_decision_webhook(doc.get("discord", ""), body.status == "accepted")
+    if doc and body.status in {"accepted", "rejected"}:
+        await notify_decision_webhook(doc.get("type", ""), doc.get("discord", ""), body.status == "accepted")
     return to_application_out(doc)
 
 
