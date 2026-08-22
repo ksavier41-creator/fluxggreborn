@@ -53,7 +53,7 @@ class UserDocument(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_mongo(self) -> dict:
-        doc = self.model_dump(by_alias=True, exclude={"id"})
+        doc = self.model_dump(by_alias=True, exclude={"id"}, exclude_none=True)
         if self.id:
             doc["_id"] = ObjectId(self.id)
         return doc
